@@ -113,9 +113,9 @@ export function GenericModal({ isOpen, onClose, schema, initialData, colName }: 
              });
            }
         } else {
-          const id = Math.random().toString(36).substr(2, 9);
-          const ref = doc(db, colName, id);
-          const toCreate = { ...formData, id };
+          const newId = formData.id?.trim() || Math.random().toString(36).substr(2, 9);
+          const ref = doc(db, colName, newId);
+          const toCreate = { ...formData, id: newId };
           if (colName === 'guru') {
             toCreate.mengajar = mengajarList.filter(m => m.id_kelas && m.id_mapel);
           }
@@ -470,10 +470,11 @@ export function GenericModal({ isOpen, onClose, schema, initialData, colName }: 
                     <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">{c.replace(/_/g, ' ')}</label>
                     <input 
                       type="text"
-                      required
+                      required={c !== 'id'}
+                      disabled={c === 'id' && !!initialData?.id}
                       value={formData[c] || ''} 
                       onChange={e => setFormData({...formData, [c]: e.target.value})} 
-                      className="w-full bg-slate-50 border border-slate-200 p-3.5 rounded-xl text-slate-900 outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-500/10 smooth-transition" 
+                      className={`w-full bg-slate-50 border border-slate-200 p-3.5 rounded-xl text-slate-900 outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-500/10 smooth-transition ${c === 'id' && !!initialData?.id ? 'opacity-60 cursor-not-allowed' : ''}`} 
                     />
                   </div>
                 );

@@ -6,7 +6,8 @@ import { Layers, Plus, Search, Filter, Download, Upload } from 'lucide-react';
 import { motion } from 'motion/react';
 import { GenericModal } from './GenericModal';
 import { db } from '../lib/firebase';
-import { deleteDoc, doc, updateDoc, collection, getDocs, query, where } from 'firebase/firestore';
+import { deleteDoc, doc, updateDoc, collection, getDocs, query, where, setDoc } from 'firebase/firestore';
+import * as XLSX from 'xlsx';
 
 export function GenericView({ menu }: { menu: string }) {
   const { user } = useApp();
@@ -100,7 +101,7 @@ export function GenericView({ menu }: { menu: string }) {
   const title = menu.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase());
   
   const getMenuSchema = () => {
-    if (menu === 'data_kelas') return ['nama', 'tingkat'];
+    if (menu === 'data_kelas') return ['id', 'nama', 'tingkat'];
     if (menu === 'data_mapel') return ['nama', 'kategori'];
     if (menu === 'data_guru') return ['nama', 'username', 'password', 'nip', 'mengajar'];
     if (menu === 'data_siswa') return ['nama', 'username', 'password', 'nis', 'id_kelas'];
@@ -262,9 +263,9 @@ export function GenericView({ menu }: { menu: string }) {
   const handleDownloadTemplate = () => {
     let csvContent = "";
     if (menu === 'data_guru') {
-      csvContent = "nama,username,password,nip,mengajar\nJohn Doe,johndoe,123456,19800101,Matematika";
+      csvContent = "nama,username,password,nip,mengajar\nBudi Santoso,budis,123456,19800101,B.Indo:10A;Matematika:10B\nJohn Doe,johndoe,123456,19800102,Fisika:10A";
     } else if (menu === 'data_siswa') {
-      csvContent = "nama,username,password,nis,kelas\nJane Doe,janedoe,123456,1001,X MIPA 1";
+      csvContent = "nama,username,password,nis,id_kelas\nSiswa Ahmad,ahmad,123456,1001,X MIPA 1";
     }
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -280,11 +281,64 @@ export function GenericView({ menu }: { menu: string }) {
     const fileInput = document.createElement('input');
     fileInput.type = 'file';
     fileInput.accept = '.csv,.xlsx,.xls';
-    fileInput.onchange = (e: any) => {
+    fileInput.onchange = async (e: any) => {
       const file = e.target.files[0];
       if (file) {
-        toast(`Berhasil mengunggah ${file.name}. Mengimpor data...`, 'success');
-        // Implementasi pembacaan excellsok bisa dilakukan menggunakan xlsx library.
+        toast(`Mengimpor data dari ${file.name}...`, 'success');
+        try {
+          const reader = new FileReader();
+          reader.onload = async (evt) => {
+            const bstr = evt.target?.result;
+            const wb = XLSX.read(bstr, { type: 'binary' });
+            const wsname = wb.SheetNames[0];
+            const ws = wb.Sheets[wsname];
+            const jsonData = XLSX.utils.sheet_to_json(ws);
+            
+            let count = 0;
+            const colName = getColName();
+            
+            for (const row of jsonData as any[]) {
+               const id = Math.random().toString(36).substr(2, 9);
+               const toSave: any = { id };
+               
+               if (menu === 'data_guru') {
+                 toSave.nama = row.nama || String(row.Nama || '');
+                 toSave.username = row.username || String(row.Username || '');
+                 toSave.password = String(row.password || row.Password || '123456');
+                 toSave.nip = String(row.nip || row.NIP || '');
+                 
+                 const mengajarStr = String(row.mengajar || row.Mengajar || '');
+                 const mengajarArr: any[] = [];
+                 if (mengajarStr && mengajarStr.trim() !== '') {
+                    const pairs = mengajarStr.split(';');
+                    for (const p of pairs) {
+                       const parts = p.split(':');
+                       if (parts.length >= 2) {
+                          mengajarArr.push({ id_mapel: parts[0].trim(), id_kelas: parts[1].trim() });
+                       }
+                    }
+                 }
+                 toSave.mengajar = mengajarArr;
+               } else if (menu === 'data_siswa') {
+                 toSave.nama = row.nama || String(row.Nama || '');
+                 toSave.username = row.username || String(row.Username || '');
+                 toSave.password = String(row.password || row.Password || '123456');
+                 toSave.nis = String(row.nis || row.NIS || '');
+                 toSave.id_kelas = String(row.id_kelas || row['id kelas'] || row.kelas || row.Kelas || '');
+               }
+               
+               if (toSave.nama && toSave.username) {
+                  await setDoc(doc(db, colName, id), toSave);
+                  count++;
+               }
+            }
+            
+            toast(`Berhasil mengimpor ${count} data ${title}.`, 'success');
+          };
+          reader.readAsBinaryString(file);
+        } catch (err: any) {
+          toast('Gagal mengimpor file: ' + err.message, 'error');
+        }
       }
     };
     fileInput.click();
