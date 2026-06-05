@@ -26,6 +26,8 @@ export function ExamRoom({ exam, onComplete }: { exam: Ujian, onComplete: () => 
   const [showConfirm, setShowConfirm] = useState(false);
   const violationCountRef = useRef(0);
 
+  const [unansweredList, setUnansweredList] = useState<number[]>([]);
+
   // Sync answersRef with answers state
   useEffect(() => {
     answersRef.current = answers;
@@ -128,6 +130,15 @@ export function ExamRoom({ exam, onComplete }: { exam: Ujian, onComplete: () => 
       toast(`Belum mencapai batas minimal waktu kumpul (${formatTime(minTime - timeUsed)} lagi)`, 'warning');
       return;
     }
+
+    const unanswered: number[] = [];
+    pgQuestions.forEach(q => {
+      if (!answers[q.id] || answers[q.id].trim() === '') unanswered.push(q.nomor);
+    });
+    essayQuestions.forEach(q => {
+      if (!answers[q.id] || answers[q.id].trim() === '') unanswered.push(q.nomor);
+    });
+    setUnansweredList(unanswered);
 
     setShowConfirm(true);
   };
@@ -251,27 +262,49 @@ export function ExamRoom({ exam, onComplete }: { exam: Ujian, onComplete: () => 
             <div className="w-16 h-16 bg-amber-100 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-4">
               <AlertTriangle className="w-8 h-8" />
             </div>
-            <h3 className="text-xl font-bold text-slate-900 mb-2">Selesai Ujian?</h3>
-            <p className="text-sm text-slate-500 mb-8">
-              Pastikan semua jawaban LJK sudah terisi dengan benar. LJK akan disubmit dan tidak dapat diubah lagi.
-            </p>
+            <h3 className="text-xl font-bold text-slate-900 mb-2">
+              {unansweredList.length > 0 ? "Ada Soal Kosong!" : "Selesai Ujian?"}
+            </h3>
+            <div className="text-sm text-slate-500 mb-8 mt-2">
+              {unansweredList.length > 0 ? (
+                <div className="text-left bg-red-50 p-3 rounded-xl border border-red-100">
+                  <p className="mb-2 text-red-600 font-semibold text-center">Terdapat {unansweredList.length} soal yang belum dijawab!</p>
+                  <p className="text-xs text-red-500 text-center mb-1">Nomor soal:</p>
+                  <p className="font-mono text-sm text-center text-red-700 font-bold overflow-hidden text-ellipsis px-2 max-h-20 custom-scrollbar overflow-y-auto">{unansweredList.join(', ')}</p>
+                  <p className="text-xs text-center text-slate-500 mt-4">Apakah Anda yakin tetap ingin mengumpulkan?</p>
+                </div>
+              ) : (
+                "Pastikan semua jawaban LJK sudah terisi dengan benar. LJK akan disubmit dan tidak dapat diubah lagi."
+              )}
+            </div>
             <div className="flex gap-3">
               <button 
                 onClick={() => setShowConfirm(false)}
-                className="flex-1 px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl btn-touch transition-colors"
+                className="flex-1 px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl btn-touch transition-colors text-sm"
                 disabled={submitting}
               >
-                Batal
+                Kembali
               </button>
               <button 
                 onClick={confirmSubmit}
-                className="flex-1 px-4 py-3 bg-violet-600 hover:bg-violet-700 text-white font-semibold rounded-xl btn-touch transition-colors shadow-lg"
+                className="flex-1 px-4 py-3 bg-violet-600 hover:bg-violet-700 text-white font-semibold rounded-xl btn-touch transition-colors shadow-lg text-sm"
                 disabled={submitting}
               >
-                Kumpulkan
+                Tetap Kumpulkan
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Auto Submit Warning Header */}
+      {timeLeft <= 10 && timeLeft > 0 && !showConfirm && (
+        <div className="fixed top-8 left-1/2 -translate-x-1/2 z-[70] bg-red-600 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4 animate-pulse pointer-events-none border-2 border-red-400">
+           <AlertTriangle className="w-8 h-8 opacity-90" />
+           <div className="flex flex-col items-start gap-0.5">
+              <p className="text-[10px] sm:text-xs font-bold uppercase tracking-widest opacity-90">Auto Kumpul</p>
+              <p className="text-xl sm:text-3xl font-black">{timeLeft} Detik</p>
+           </div>
         </div>
       )}
 
