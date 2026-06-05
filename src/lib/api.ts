@@ -94,10 +94,27 @@ class FirestoreAPI {
     if (action === 'get_dashboard_stats') {
       const state: any = { guru: [], siswa: [], mapel: [], kelas: [], ujian: [], nilai: [], progres: [] };
       const notify = () => {
+        const perfMap: Record<string, {total: number, count: number}> = {};
+        state.nilai.forEach((n: any) => {
+           const s = state.siswa.find((siswa: any) => siswa.id === n.id_siswa || siswa.nis === n.id_siswa || siswa.username === n.id_siswa);
+           if (s && s.id_kelas) {
+              const kName = s.id_kelas === 'ALL' ? 'Semua' : (state.kelas.find((k:any) => k.id === s.id_kelas)?.nama || s.id_kelas);
+              if (!perfMap[kName]) perfMap[kName] = { total: 0, count: 0 };
+              const score = Number(n.nilai_katrol) || Number(n.nilai_asli) || 0;
+              perfMap[kName].total += score;
+              perfMap[kName].count++;
+           }
+        });
+        const kelas_performance = Object.keys(perfMap).map(kName => ({
+           name: kName,
+           average: Math.round(perfMap[kName].total / perfMap[kName].count)
+        }));
+
         cb({
           guru: state.guru.length, siswa: state.siswa.length, mapel: state.mapel.length, kelas: state.kelas.length,
           ujian: state.ujian.length, siswa_login: 0, siswa_belum_login: state.siswa.length,
-          siswa_selesai: state.nilai.length, siswa_mengerjakan: state.progres.filter((p:any) => p.status === 'Sedang Mengerjakan').length
+          siswa_selesai: state.nilai.length, siswa_mengerjakan: state.progres.filter((p:any) => p.status === 'Sedang Mengerjakan').length,
+          kelas_performance: kelas_performance.sort((a,b) => b.average - a.average)
         });
       };
       

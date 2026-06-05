@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { formatTime } from '../lib/utils';
 import { motion } from 'motion/react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 export function AdminHome() {
   const { user } = useApp();
@@ -175,6 +176,29 @@ export function AdminHome() {
           <p className="text-[10px] uppercase text-amber-600 font-bold tracking-widest mt-1">Mengerjakan</p>
         </div>
       </div>
+
+      {/* Class Performance Chart */}
+      {stats.kelas_performance && stats.kelas_performance.length > 0 && (
+        <div className="bg-white border border-slate-200 rounded-[2rem] p-8 mt-6">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-xl font-semibold text-slate-900">Tren Performa Kelas</h3>
+            <p className="text-xs text-slate-500 font-medium">Berdasarkan Rata-rata Nilai Siswa</p>
+          </div>
+          <div className="h-[300px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={stats.kelas_performance} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} dy={10} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} />
+                <Tooltip 
+                  cursor={{ fill: '#f8fafc' }}
+                  contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)' }}
+                />
+                <Bar dataKey="average" name="Rata-rata Nilai" fill="#8b5cf6" radius={[6, 6, 0, 0]} maxBarSize={50} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
 
     </div>
   );

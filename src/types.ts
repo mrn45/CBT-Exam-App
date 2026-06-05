@@ -59,4 +59,5 @@ export interface DashboardStats {
   siswa_belum_login: number;
   siswa_selesai: number;
   siswa_mengerjakan: number;
+  kelas_performance?: { name: string, average: number }[];
 }

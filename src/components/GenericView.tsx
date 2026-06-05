@@ -573,7 +573,28 @@ export function GenericView({ menu }: { menu: string }) {
                              }) : <span className="text-slate-400 italic font-medium text-xs">Belum diatur</span>}
                           </div>
                         ) : c === 'status' || c.includes('status') ? (
-                          <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${
+                          <span 
+                            onClick={async () => {
+                              if (menu === 'ujian' && c === 'status') {
+                                try {
+                                  const newStatus = String(row[c]).toLowerCase() === 'aktif' ? 'Non-Aktif' : 'Aktif';
+                                  const ref = doc(db, getColName(), row.id);
+                                  await updateDoc(ref, { status: newStatus });
+                                  if (user) {
+                                    api.call('add_activity_log', {
+                                      id_user: user.id || user.username,
+                                      nama_user: user.nama || user.username,
+                                      role: user.role,
+                                      aktivitas: `Mengubah status ujian ${row.judul || row.id} menjadi ${newStatus}`
+                                    });
+                                  }
+                                  toast(`Status diubah menjadi ${newStatus}`, 'success');
+                                } catch (err: any) {
+                                  toast('Gagal mengubah status: ' + err.message, 'error');
+                                }
+                              }
+                            }}
+                            className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${menu === 'ujian' && c === 'status' ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''} ${
                             String(row[c]).toLowerCase() === 'aktif' || String(row[c]).toLowerCase() === 'selesai' || String(row[c]).toLowerCase() === 'sudah dikoreksi' ? 'bg-green-500/10 text-green-500 border border-green-500/20' :
                             String(row[c]).toLowerCase() === 'mengerjakan' ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' :
                             'bg-slate-100 text-slate-500 border border-slate-200'
