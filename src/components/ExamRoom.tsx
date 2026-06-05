@@ -151,10 +151,10 @@ export function ExamRoom({ exam, onComplete }: { exam: Ujian, onComplete: () => 
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-50 lg:flex lg:flex-row gap-2 sm:gap-4 p-2 sm:p-4 overflow-y-auto lg:overflow-hidden">
+    <div className="fixed inset-0 z-50 bg-slate-50 flex flex-col lg:flex-row gap-2 lg:gap-4 p-2 lg:p-4 overflow-hidden">
       
       {/* PDF View (Mocked with IFrame using Data URL) */}
-      <div className="w-full h-[60vh] lg:h-auto lg:flex-1 lg:flex-[3] bg-slate-50 rounded-2xl border border-slate-200 shadow-none flex flex-col overflow-hidden mb-4 lg:mb-0 shrink-0">
+      <div className="w-full h-[45vh] lg:h-auto lg:flex-1 lg:flex-[3] bg-slate-50 rounded-2xl border border-slate-200 shadow-none flex flex-col overflow-hidden shrink-0">
         <div className="bg-white border-b border-slate-200 text-slate-900 px-3 sm:px-4 py-2.5 sm:py-3 flex justify-between items-center shrink-0">
           <span className="font-semibold text-xs sm:text-sm flex items-center"><FileText className="w-4 h-4 text-violet-500 mr-2" /> NASKAH SOAL</span>
           <div className="text-[10px] sm:text-xs bg-slate-100 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg border border-slate-200 text-slate-500 truncate max-w-[150px] sm:max-w-none">
@@ -171,7 +171,7 @@ export function ExamRoom({ exam, onComplete }: { exam: Ujian, onComplete: () => 
       </div>
 
       {/* Control Panel & LJK */}
-      <div className="w-full lg:w-[420px] lg:flex-none bg-white rounded-2xl border border-slate-200 shadow-none flex flex-col lg:overflow-hidden relative shrink-0">
+      <div className="flex-1 w-full lg:w-[420px] lg:flex-none bg-white rounded-2xl border border-slate-200 shadow-none flex flex-col overflow-hidden relative shrink-0">
         <div className="bg-white border-b border-slate-200 text-slate-900 p-3 sm:p-5 shrink-0 flex flex-col gap-3 sm:gap-4 relative z-10 sticky top-0">
           <div className="flex justify-between items-center">
             <h4 className="font-semibold text-violet-400 tracking-tight text-base sm:text-lg">LJK DIGITAL</h4>
