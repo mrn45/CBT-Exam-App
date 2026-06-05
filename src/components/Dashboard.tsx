@@ -3,7 +3,7 @@ import { useApp } from '../lib/context';
 import { 
   Layers, LogOut, Menu, X, LayoutDashboard, Users,
   GraduationCap, Target, FileText, PieChart, Settings,
-  Radio, PenTool, Scale, BookOpen
+  Radio, PenTool, Scale, BookOpen, Activity
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
@@ -50,6 +50,7 @@ export function Dashboard() {
     { id: 'monitor', icon: Radio, label: 'Live Monitor' },
     { id: 'rekap', icon: PieChart, label: 'Rekap Nilai' },
     { type: 'label', label: 'Sistem' },
+    { id: 'log_aktivitas', icon: Activity, label: 'Log Aktivitas' },
     { id: 'settings', icon: Settings, label: 'Pengaturan' },
   ];
 
@@ -79,7 +80,12 @@ export function Dashboard() {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50">
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.6 }}
+      className="flex h-screen overflow-hidden bg-slate-50"
+    >
       
       {/* Mobile Sidebar Overlay */}
       <AnimatePresence>
@@ -198,6 +204,6 @@ export function Dashboard() {
         </div>
       </main>
 
-    </div>
+    </motion.div>
   );
 }

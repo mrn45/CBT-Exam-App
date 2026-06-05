@@ -1,6 +1,6 @@
 import { User, Ujian, Settings, Soal, DashboardStats } from '../types';
 import { db, auth } from './firebase';
-import { collection, doc, deleteDoc, getDocs, getDoc, setDoc, updateDoc, writeBatch, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, doc, deleteDoc, getDocs, getDoc, setDoc, updateDoc, writeBatch, query, where, onSnapshot, orderBy } from 'firebase/firestore';
 
 const dPDF = 'data:application/pdf;base64,JVBERi0xLjcKCjEgMCBvYmogICUgZW50cnkgcG9pbnQKPDwKICAvVHlwZSAvQ2F0YWxvZwogIC9QYWdlcyAyIDAgUgo+PgplbmRvYmoKCjIgMCBvYmoKPDwKICAvVHlwZSAvUGFnZXMKICAvTWVkaWFCb3ggWyAwIDAgMjAwIDIwMCBdCiAgL0NvdW50IDEKICAvS2lkcyBbIDMgMCBSIF0KPj4KZW5kb2JqCgozIDAgb2JqCjw8CiAgL1R5cGUgL1BhZ2UKICAvUGFyZW50IDIgMCBSCiAgL1Jlc291cmNlcyA8PAogICAgL0ZvbnQgPDwKICAgICAgL0YxIDQgMCBSCgogICAgPj4KICA+PgogIC9Db250ZW50cyA1IDAgUgo+PgplbmRvYmoKCjQgMCBvYmoKPDwKICAvVHlwZSAvRm9udAogIC9TdWJ0eXBlIC9UeXBlMQogIC9CYXNlRm9udCAvVGltZXMtUm9tYW4KPj4KZW5kb2JqCgo1IDAgb2JqICAlIHBhZ2UgY29udGVudAo8PAogIC9MZW5ndGggNDQKPj4Kc3RyZWFtCkJUCjcwIDUwIFRECi9GMSAxMiBUZgooSGVsbG8sIHdvcmxkISkgVGoKRVQKZW5kc3RyZWFtCmVuZG9iagoKeHJlZgowIDYKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDEwIDAwMDAwIG4gCjAwMDAwMDAwNjggMDAwMDAgbiAKMDAwMDAwMDE2NyAwMDAwMCBuIAowMDAwMDAwMjk2IDAwMDAwIG4gCjAwMDAwMDAzODQgMDAwMDAgbiAKdHJhaWxlcgo8PAogIC9TaXplIDYKICAvUk9PVCAxIDAgUgo+PgpzdGFydHhyZWYKNDc5CiUlRU9GCg==';
 const pastTimeStr = new Date(Date.now() - 3600000).toISOString().slice(0, 16);
@@ -8,20 +8,14 @@ const pastTimeStr = new Date(Date.now() - 3600000).toISOString().slice(0, 16);
 // SEEDER DATA
 const mockSettings: Settings = { appName: 'CBT Cerdas', adminName: 'Ahmad Hanafi', current_token: 'A1B2C3', token_expiry: Date.now() + 300000, namaSekolah: 'SMP Islam Assyafiiyah', auto_katrol_kkm: true, logo_instansi: '' };
 const mockUsers = [ 
-  { id: 'U1', username: 'admin', password: 'edudigital', role: 'Admin', nama: 'Administrator' }, 
-  { id: 'U2', username: 'pengawas', password: 'edudigital', role: 'Pengawas', nama: 'Bapak Budi Santoso' }, 
-  { id: 'U3', username: '1001', password: '123', role: 'Siswa', nama: 'Andi Kusuma', id_kelas: 'K1' },
-  { id: 'U4', username: '1002', password: '123', role: 'Siswa', nama: 'Budi Darmawan', id_kelas: 'K2' }
+  { id: 'U1', username: 'admin', password: '51001n', role: 'Admin', nama: 'Administrator' }
 ];
-const mockKelas = [ { id: 'K1', nama: 'X MIPA 1' }, { id: 'K2', nama: 'XI IPS 2' } ];
-const mockMapel = [ { id: 'M1', nama: 'Matematika Terapan' }, { id: 'M2', nama: 'Bahasa Indonesia' } ];
-const mockGuru = [ { id: 'G1', nip: '19800101', nama: 'Bapak Budi Santoso', username: 'pengawas', password: 'edudigital', id_kelas: 'ALL', id_mapel: 'ALL' } ];
-const mockSiswa = [ 
-  { id: 'S1', nis: '1001', nama: 'Andi Kusuma', id_kelas: 'K1', username: '1001', password: '123' },
-  { id: 'S2', nis: '1002', nama: 'Budi Darmawan', id_kelas: 'K2', username: '1002', password: '123' }
-];
-const mockUjian = [ { id: 'UJ1', id_mapel: 'M1', id_kelas: 'ALL', judul: 'Ujian Tengah Semester MTK', durasi: 60, target_nilai: 75, status: 'Aktif', file_pdf: dPDF, jml_soal: 5, jml_opsi: 5, jml_essay: 2, waktu_mulai: pastTimeStr, min_kumpul: 1 } ];
-const mockSoal = [ { id: 'Soal1', id_ujian: 'UJ1', nomor: 1, jawaban: 'A' }, { id: 'Soal2', id_ujian: 'UJ1', nomor: 2, jawaban: 'B' }, { id: 'Soal3', id_ujian: 'UJ1', nomor: 3, jawaban: 'C' }, { id: 'Soal4', id_ujian: 'UJ1', nomor: 4, jawaban: 'D' }, { id: 'Soal5', id_ujian: 'UJ1', nomor: 5, jawaban: 'E' } ];
+const mockKelas: any[] = [];
+const mockMapel: any[] = [];
+const mockGuru: any[] = [];
+const mockSiswa: any[] = [];
+const mockUjian: any[] = [];
+const mockSoal: any[] = [];
 
 let seedChecked = false;
 async function ensureSeeded() {
@@ -33,14 +27,33 @@ async function ensureSeeded() {
       const b = writeBatch(db);
       b.set(doc(db, 'settings', 'global'), mockSettings);
       mockUsers.forEach(u => b.set(doc(db, 'users', u.id), u));
-      mockKelas.forEach(u => b.set(doc(db, 'kelas', u.id), u));
-      mockMapel.forEach(u => b.set(doc(db, 'mapel', u.id), u));
-      mockGuru.forEach(u => b.set(doc(db, 'guru', u.id), u));
-      mockSiswa.forEach(u => b.set(doc(db, 'siswa', u.id), u));
-      mockUjian.forEach(u => b.set(doc(db, 'ujian', u.id), u));
-      mockSoal.forEach(u => b.set(doc(db, 'soal', u.id), u));
       await b.commit();
       console.log("Seed complete.");
+    } else {
+      const u2Snap = await getDoc(doc(db, 'users', 'U2'));
+      if (u2Snap.exists()) {
+        console.log("Old mocks detected. Cleaning up...");
+        const b = writeBatch(db);
+        b.delete(doc(db, 'users', 'U2'));
+        b.delete(doc(db, 'users', 'U3'));
+        b.delete(doc(db, 'users', 'U4'));
+        b.delete(doc(db, 'guru', 'G1'));
+        b.delete(doc(db, 'siswa', 'S1'));
+        b.delete(doc(db, 'siswa', 'S2'));
+        b.delete(doc(db, 'kelas', 'K1'));
+        b.delete(doc(db, 'kelas', 'K2'));
+        b.delete(doc(db, 'mapel', 'M1'));
+        b.delete(doc(db, 'mapel', 'M2'));
+        b.delete(doc(db, 'ujian', 'UJ1'));
+        b.delete(doc(db, 'soal', 'Soal1'));
+        b.delete(doc(db, 'soal', 'Soal2'));
+        b.delete(doc(db, 'soal', 'Soal3'));
+        b.delete(doc(db, 'soal', 'Soal4'));
+        b.delete(doc(db, 'soal', 'Soal5'));
+        b.update(doc(db, 'users', 'U1'), { password: '51001n' });
+        await b.commit();
+        console.log("Cleanup complete.");
+      }
     }
     seedChecked = true;
   } catch (e) {
@@ -67,9 +80,11 @@ class FirestoreAPI {
     else if (action === 'get_rekap') colName = 'nilai';
     else if (action === 'get_progres') colName = 'progres';
     else if (action === 'get_bank_soal') colName = 'soal';
+    else if (action === 'get_log_aktivitas') colName = 'log_aktivitas';
     
     if (colName) {
-      return onSnapshot(collection(db, colName), (snap) => {
+      const q = colName === 'log_aktivitas' ? query(collection(db, colName), orderBy('timestamp', 'desc')) : collection(db, colName);
+      return onSnapshot(q, (snap) => {
         cb(snap.docs.map(d => ({id: d.id, ...d.data()})));
       }, (err) => {
         console.warn("Snapshot error:", err);
@@ -134,6 +149,16 @@ class FirestoreAPI {
         });
         return { success: true, message: 'Admin dan database berhasil diprovisikan' };
 
+      case 'add_activity_log':
+        await setDoc(doc(collection(db, 'log_aktivitas')), {
+          id_user: payload.id_user,
+          nama_user: payload.nama_user,
+          role: payload.role,
+          aktivitas: payload.aktivitas,
+          timestamp: Date.now()
+        });
+        return { success: true };
+
       case 'get_admins':
         const adminSnap = await getDocs(query(collection(db, 'users'), where('role', '==', 'Admin')));
         return { success: true, data: adminSnap.docs.map(g => ({ id: g.id, ...g.data() })) };
@@ -183,10 +208,23 @@ class FirestoreAPI {
             const gSnap = await getDocs(query(collection(db, 'guru'), where('username', '==', payload.username)));
             if (!gSnap.empty) {
               const g: any = { id: gSnap.docs[0].id, ...gSnap.docs[0].data() };
-              u.id_kelas = g.id_kelas; u.id_mapel = g.id_mapel; u.id = g.id;
+              u.mengajar = g.mengajar; u.id = g.id;
             }
           }
           return { success: true, data: u };
+        } else {
+          // Check Guru
+          const gSnap = await getDocs(query(collection(db, 'guru'), where('username', '==', payload.username), where('password', '==', payload.password)));
+          if (!gSnap.empty) {
+            const g = { id: gSnap.docs[0].id, ...gSnap.docs[0].data() } as any;
+            return { success: true, data: { id: g.id, username: g.username, role: 'Pengawas', nama: g.nama, mengajar: g.mengajar } };
+          }
+          // Check Siswa
+          const sSnap = await getDocs(query(collection(db, 'siswa'), where('username', '==', payload.username), where('password', '==', payload.password)));
+          if (!sSnap.empty) {
+            const s = { id: sSnap.docs[0].id, ...sSnap.docs[0].data() } as any;
+            return { success: true, require_token: true, temp_data: { id: s.id, username: s.username, role: 'Siswa', nama: s.nama, id_siswa: s.id, id_kelas: s.id_kelas } };
+          }
         }
         return { success: false, message: 'Akun salah / tidak ditemukan!' };
       
@@ -289,17 +327,28 @@ class FirestoreAPI {
         }
         return { success: true };
       case 'submit_ujian':
-        const fSoals = await getDocs(query(collection(db, 'soal'), where('id_ujian', '==', payload.id_ujian)));
-        const trueSoal: any[] = fSoals.docs.map(d => ({id_soal: d.id, ...d.data()}));
+        const ujianDoc = await getDoc(doc(db, 'ujian', payload.id_ujian));
+        let kunciJawaban: Record<string, string> = {};
+        let jml_soal_pg = 0;
+        
+        if (ujianDoc.exists()) {
+          kunciJawaban = ujianDoc.data().kunci_jawaban || {};
+          jml_soal_pg = Number(ujianDoc.data().jml_soal) || 0;
+        }
         
         let bn = 0;
         for (let idS in payload.jawaban) {
           if (!idS.startsWith('essay_')) {
-            let sD:any = trueSoal.find(x => x.id_soal === idS || x.id === idS);
-            if (sD && sD.jawaban === payload.jawaban[idS]) bn++;
+            const noMatch = idS.match(/\d+/);
+            if (noMatch) {
+              const no = parseInt(noMatch[0], 10);
+              if (kunciJawaban[no] && payload.jawaban[idS] === kunciJawaban[no]) {
+                bn++;
+              }
+            }
           }
         }
-        let score = Math.round((trueSoal.length > 0) ? (bn / trueSoal.length) * 100 : 0);
+        let score = Math.round((jml_soal_pg > 0) ? (bn / jml_soal_pg) * 100 : 0);
         
         await setDoc(doc(collection(db, 'nilai')), {
           id_ujian: payload.id_ujian,

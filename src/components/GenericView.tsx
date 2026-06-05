@@ -25,7 +25,7 @@ export function GenericView({ menu }: { menu: string }) {
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    if (menu === 'data_cp' || menu === 'input_cp' || menu === 'rekap' || menu === 'katrol' || menu === 'monitor') {
+    if (menu === 'data_cp' || menu === 'input_cp' || menu === 'rekap' || menu === 'katrol' || menu === 'monitor' || menu === 'data_guru' || menu === 'data_siswa' || menu === 'ujian') {
       const fetchFilters = async () => {
         try {
           const mapelSnap = await getDocs(collection(db, 'mapel'));
@@ -55,6 +55,7 @@ export function GenericView({ menu }: { menu: string }) {
     if (menu === 'koreksi') return 'nilai';
     if (menu === 'rekap' || menu === 'katrol') return 'nilai';
     if (menu === 'monitor') return 'progres';
+    if (menu === 'log_aktivitas') return 'log_aktivitas';
     return '';
   }
 
@@ -70,6 +71,7 @@ export function GenericView({ menu }: { menu: string }) {
     if (menu === 'koreksi') endpoint = 'get_koreksi_list';
     if (menu === 'rekap' || menu === 'katrol') endpoint = 'get_rekap';
     if (menu === 'monitor') endpoint = 'get_progres';
+    if (menu === 'log_aktivitas') endpoint = 'get_log_aktivitas';
     
     let unsub: any = null;
     if (endpoint) {
@@ -96,14 +98,15 @@ export function GenericView({ menu }: { menu: string }) {
   const getMenuSchema = () => {
     if (menu === 'data_kelas') return ['nama', 'tingkat'];
     if (menu === 'data_mapel') return ['nama', 'kategori'];
-    if (menu === 'data_guru') return ['nama', 'nip', 'password', 'id_mapel', 'id_kelas'];
-    if (menu === 'data_siswa') return ['nama', 'nis', 'password', 'id_kelas'];
+    if (menu === 'data_guru') return ['nama', 'username', 'password', 'nip', 'mengajar'];
+    if (menu === 'data_siswa') return ['nama', 'username', 'password', 'nis', 'id_kelas'];
     if (menu === 'data_cp' || menu === 'input_cp') return ['id_mapel', 'id_kelas', 'capaian_pembelajaran', 'deskripsi'];
     if (menu === 'bank_soal') return ['id_ujian', 'pertanyaan', 'opsi_a', 'opsi_b', 'opsi_c', 'opsi_d', 'opsi_e', 'jawaban_benar'];
     if (menu === 'ujian') return ['judul', 'id_mapel', 'id_kelas', 'waktu_mulai', 'durasi_menit', 'jml_soal', 'jml_essay', 'jml_opsi', 'status', 'file_pdf'];
     if (menu === 'rekap' || menu === 'katrol') return ['id_siswa', 'nilai_asli', 'nilai_harian', 'nilai_tugas', 'nilai_katrol', 'status', 'status_koreksi'];
     if (menu === 'koreksi') return ['id_ujian', 'id_siswa', 'nilai_asli', 'status', 'jawaban_essay', 'status_koreksi'];
     if (menu === 'monitor') return ['id_ujian', 'id_siswa', 'status', 'terjawab'];
+    if (menu === 'log_aktivitas') return ['timestamp', 'role', 'nama_user', 'aktivitas'];
     return null;
   };
 
@@ -137,6 +140,14 @@ export function GenericView({ menu }: { menu: string }) {
       };
       
       await updateDoc(doc(db, 'nilai', row.id), updateData);
+      if (user?.role === 'Guru' || user?.role === 'Pengawas') {
+        api.call('add_activity_log', {
+          id_user: user.id || user.username,
+          nama_user: user.nama || user.username,
+          role: user.role,
+          aktivitas: `Memproses katrol/nilai akhir untuk siswa ID: ${row.id_siswa}`
+        });
+      }
       toast('Nilai akhir berhasil diproses', 'success');
     } catch (err: any) {
       toast('Gagal memproses nilai: ' + err.message, 'error');
@@ -166,6 +177,14 @@ export function GenericView({ menu }: { menu: string }) {
       });
 
       await Promise.all(promises);
+      if (user?.role === 'Guru' || user?.role === 'Pengawas') {
+        api.call('add_activity_log', {
+          id_user: user.id || user.username,
+          nama_user: user.nama || user.username,
+          role: user.role,
+          aktivitas: `Memproses massal katrol/nilai akhir untuk ${filteredData.length} siswa`
+        });
+      }
       toast('Berhasil memproses semua nilai akhir', 'success');
     } catch (err: any) {
       toast('Gagal memproses nilai: ' + err.message, 'error');
@@ -239,9 +258,9 @@ export function GenericView({ menu }: { menu: string }) {
   const handleDownloadTemplate = () => {
     let csvContent = "";
     if (menu === 'data_guru') {
-      csvContent = "nama,nip,mengajar,password\nJohn Doe,19800101,Matematika,123456";
+      csvContent = "nama,username,password,nip,mengajar\nJohn Doe,johndoe,123456,19800101,Matematika";
     } else if (menu === 'data_siswa') {
-      csvContent = "nama,nis,kelas,password\nJane Doe,1001,X MIPA 1,123456";
+      csvContent = "nama,username,password,nis,kelas\nJane Doe,janedoe,123456,1001,X MIPA 1";
     }
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -268,20 +287,27 @@ export function GenericView({ menu }: { menu: string }) {
   };
 
   const filteredData = data.filter((row: any) => {
-    if (user?.role === 'Pengawas') {
-      if (user.id_kelas && user.id_kelas !== 'ALL') {
+    if (user?.role === 'Pengawas' && user.mengajar && Array.isArray(user.mengajar)) {
+      const allowedKelas = user.mengajar.map((m:any) => m.id_kelas);
+      const allowedMapel = user.mengajar.map((m:any) => m.id_mapel);
+      
+      const isAllKelas = allowedKelas.includes('ALL');
+      const isAllMapel = allowedMapel.includes('ALL');
+
+      if (!isAllKelas) {
         if (['rekap', 'katrol', 'monitor'].includes(menu)) {
            const siswa = siswaList.find(s => s.id === row.id_siswa);
-           if (!siswa || siswa.id_kelas !== user.id_kelas) return false;
-        } else if (row.id_kelas && row.id_kelas !== user.id_kelas) {
+           if (!siswa || !allowedKelas.includes(siswa.id_kelas)) return false;
+        } else if (row.id_kelas && !allowedKelas.includes(row.id_kelas)) {
            return false;
         }
       }
-      if (user.id_mapel && user.id_mapel !== 'ALL') {
+      
+      if (!isAllMapel) {
          if (['rekap', 'katrol', 'monitor'].includes(menu)) {
             const ujian = ujianList.find(u => u.id === row.id_ujian);
-            if (!ujian || ujian.id_mapel !== user.id_mapel) return false;
-         } else if (row.id_mapel && row.id_mapel !== user.id_mapel) {
+            if (!ujian || !allowedMapel.includes(ujian.id_mapel)) return false;
+         } else if (row.id_mapel && !allowedMapel.includes(row.id_mapel)) {
             return false;
          }
       }
@@ -411,12 +437,12 @@ export function GenericView({ menu }: { menu: string }) {
               className="w-full bg-slate-50 border border-slate-200 pl-10 pr-4 py-2.5 rounded-full text-sm text-slate-800 outline-none focus:border-violet-500"
             />
           </div>
-          {!['rekap', 'katrol', 'monitor', 'koreksi'].includes(menu) && (
+          {!['rekap', 'katrol', 'monitor', 'koreksi', 'log_aktivitas'].includes(menu) && (
             <button className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 w-10 h-10 rounded-full flex items-center justify-center shrink-0 btn-touch shadow-sm hidden sm:flex">
               <Filter className="w-4 h-4" />
             </button>
           )}
-          {!['rekap', 'katrol', 'monitor', 'koreksi'].includes(menu) && (
+          {!['rekap', 'katrol', 'monitor', 'koreksi', 'log_aktivitas'].includes(menu) && (
             <button onClick={handleAdd} className="bg-violet-600 hover:bg-violet-700 text-white w-10 h-10 rounded-full flex items-center justify-center shrink-0 btn-touch shadow-[0_4px_15px_rgba(139,92,246,0.3)]">
               <Plus className="w-5 h-5" />
             </button>
@@ -445,7 +471,9 @@ export function GenericView({ menu }: { menu: string }) {
                       {c === 'nilai_katrol' ? 'NILAI AKHIR' : c.replace(/_/g, ' ')}
                     </th>
                   ))}
-                  <th className="px-6 py-4 font-semibold uppercase text-xs tracking-wider text-slate-500 text-right">Aksi</th>
+                  {menu !== 'log_aktivitas' && (
+                    <th className="px-6 py-4 font-semibold uppercase text-xs tracking-wider text-slate-500 text-right">Aksi</th>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#1e293b]">
@@ -479,6 +507,19 @@ export function GenericView({ menu }: { menu: string }) {
                           ) : (
                             <span className="font-medium text-slate-700">{row[c] ?? 0}</span>
                           )
+                        ) : c === 'mengajar' ? (
+                          <div className="flex flex-col gap-1 my-1">
+                             {Array.isArray(row[c]) ? row[c].map((m: any, idx: number) => {
+                                 const kelasName = m.id_kelas === 'ALL' ? 'Semua Kelas' : (kelasList.find(k => k.id === m.id_kelas)?.nama || m.id_kelas);
+                                 const mapelName = m.id_mapel === 'ALL' ? 'Semua Mapel' : (mapelList.find(mpl => mpl.id === m.id_mapel)?.nama || m.id_mapel);
+                                 return (
+                                   <div key={idx} className="bg-slate-100 text-slate-600 px-2 py-1 rounded text-[10px] uppercase font-semibold tracking-wider flex items-center justify-between gap-3 min-w-[max-content]">
+                                      <span className="truncate max-w-[120px] text-violet-600 font-bold" title={kelasName}>{kelasName}</span>
+                                      <span className="truncate max-w-[150px]" title={mapelName}>{mapelName}</span>
+                                   </div>
+                                 );
+                             }) : <span className="text-slate-400 italic font-medium text-xs">Belum diatur</span>}
+                          </div>
                         ) : c === 'status' || c.includes('status') ? (
                           <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${
                             String(row[c]).toLowerCase() === 'aktif' || String(row[c]).toLowerCase() === 'selesai' || String(row[c]).toLowerCase() === 'sudah dikoreksi' ? 'bg-green-500/10 text-green-500 border border-green-500/20' :
@@ -497,6 +538,26 @@ export function GenericView({ menu }: { menu: string }) {
                               <div className="bg-violet-500 h-1.5 rounded-full smooth-transition" style={{ width: `${(Number(row.terjawab) / Number(row.total_soal)) * 100}%` }}></div>
                             </div>
                           </div>
+                        ) : c === 'id_kelas' ? (
+                          <span className="truncate max-w-[200px] inline-block align-bottom font-medium text-slate-700">
+                             {row[c] === 'ALL' ? 'Semua Kelas' : (kelasList.find(k => k.id === row[c])?.nama || row[c])}
+                          </span>
+                        ) : c === 'id_mapel' ? (
+                          <span className="truncate max-w-[200px] inline-block align-bottom font-medium text-slate-700">
+                             {row[c] === 'ALL' ? 'Semua Mapel' : (mapelList.find(m => m.id === row[c])?.nama || row[c])}
+                          </span>
+                        ) : c === 'id_siswa' ? (
+                          <span className="truncate max-w-[200px] inline-block align-bottom font-medium text-slate-700">
+                             {siswaList.find(s => s.id === row[c])?.nama || row[c]}
+                          </span>
+                        ) : c === 'id_ujian' ? (
+                          <span className="truncate max-w-[200px] inline-block align-bottom font-medium text-slate-700">
+                             {ujianList.find(u => u.id === row[c])?.judul || row[c]}
+                          </span>
+                        ) : c === 'timestamp' && typeof row[c] === 'number' ? (
+                          <span className="truncate max-w-[200px] inline-block align-bottom font-medium text-slate-700">
+                             {new Date(row[c]).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}
+                          </span>
                         ) : (
                           <span className="truncate max-w-[250px] inline-block align-bottom text-ellipsis overflow-hidden">
                             {String(row[c]).length > 60 ? String(row[c]).substring(0,60)+'...' : String(row[c])}
@@ -504,25 +565,27 @@ export function GenericView({ menu }: { menu: string }) {
                         )}
                       </td>
                     ))}
-                    <td className="px-6 py-4 text-right">
-                      {menu === 'ujian' && (
-                         <button onClick={() => handleEditKunci(row)} className="text-emerald-500 hover:text-emerald-400 text-xs font-medium mr-3 btn-touch">Set Kunci</button>
-                      )}
-                      
-                      {(menu === 'rekap' || menu === 'katrol') ? (
-                        (user?.role === 'Guru' || user?.role === 'Pengawas') ? (
-                          <button onClick={() => handleProsesKatrol(row)} className="text-violet-500 bg-violet-50 hover:bg-violet-100 px-3 py-1.5 rounded-lg text-xs font-semibold mr-3 btn-touch transition-colors">Proses</button>
-                        ) : null
-                      ) : menu === 'monitor' ? null : (
-                        <button onClick={() => handleEdit(row)} className="text-violet-400 hover:text-violet-300 text-xs font-medium mr-3 btn-touch">Edit</button>
-                      )}
-                      
-                      {menu === 'monitor' ? (
-                        <button onClick={() => handleDelete(row)} className="text-orange-500 bg-orange-50 hover:bg-orange-100 px-3 py-1.5 rounded-lg text-xs font-semibold btn-touch transition-colors">Reset Peserta</button>
-                      ) : (
-                        <button onClick={() => handleDelete(row)} className="text-red-500 hover:text-red-400 text-xs font-medium btn-touch">Hapus</button>
-                      )}
-                    </td>
+                    {menu !== 'log_aktivitas' && (
+                      <td className="px-6 py-4 text-right">
+                        {menu === 'ujian' && (
+                           <button onClick={() => handleEditKunci(row)} className="text-emerald-500 hover:text-emerald-400 text-xs font-medium mr-3 btn-touch">Set Kunci</button>
+                        )}
+                        
+                        {(menu === 'rekap' || menu === 'katrol') ? (
+                          (user?.role === 'Guru' || user?.role === 'Pengawas') ? (
+                            <button onClick={() => handleProsesKatrol(row)} className="text-violet-500 bg-violet-50 hover:bg-violet-100 px-3 py-1.5 rounded-lg text-xs font-semibold mr-3 btn-touch transition-colors">Proses</button>
+                          ) : null
+                        ) : menu === 'monitor' ? null : (
+                          <button onClick={() => handleEdit(row)} className="text-violet-400 hover:text-violet-300 text-xs font-medium mr-3 btn-touch">Edit</button>
+                        )}
+                        
+                        {menu === 'monitor' ? (
+                          <button onClick={() => handleDelete(row)} className="text-orange-500 bg-orange-50 hover:bg-orange-100 px-3 py-1.5 rounded-lg text-xs font-semibold btn-touch transition-colors">Reset Peserta</button>
+                        ) : (
+                          <button onClick={() => handleDelete(row)} className="text-red-500 hover:text-red-400 text-xs font-medium btn-touch">Hapus</button>
+                        )}
+                      </td>
+                    )}
                   </motion.tr>
                 ))}
               </tbody>

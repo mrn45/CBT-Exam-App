@@ -5,6 +5,7 @@ import { db } from '../lib/firebase';
 import { doc, setDoc, updateDoc, collection, getDocs } from 'firebase/firestore';
 import { toast } from './ui/Toast';
 import { useApp } from '../lib/context';
+import { api } from '../lib/api';
 
 export function GenericModal({ isOpen, onClose, schema, initialData, colName }: { isOpen: boolean, onClose: () => void, schema: any[], initialData: any, colName: string }) {
   const { user } = useApp();
@@ -14,6 +15,19 @@ export function GenericModal({ isOpen, onClose, schema, initialData, colName }: 
   const [mapelList, setMapelList] = useState<any[]>([]);
   const [kelasList, setKelasList] = useState<any[]>([]);
   
+  // Guru Multi Mengajar
+  const [mengajarList, setMengajarList] = useState<{id_kelas: string, id_mapel: string}[]>(() => {
+    if (colName === 'guru' && initialData) {
+      if (initialData.mengajar && Array.isArray(initialData.mengajar)) {
+        // Deep copy safely to prevent mutation
+        return JSON.parse(JSON.stringify(initialData.mengajar));
+      } else if (initialData.id_kelas && initialData.id_mapel) {
+        return [{ id_kelas: initialData.id_kelas, id_mapel: initialData.id_mapel }];
+      }
+    }
+    return [{id_kelas: '', id_mapel: ''}];
+  });
+
   // CP Multi Input
   const [jumlahCp, setJumlahCp] = useState(1);
   const [cpList, setCpList] = useState<{capaian_pembelajaran: string, deskripsi: string}>([{capaian_pembelajaran: '', deskripsi: ''}]);
@@ -65,8 +79,20 @@ export function GenericModal({ isOpen, onClose, schema, initialData, colName }: 
            }
         }
 
+        if (colName === 'guru') {
+          toSave.mengajar = mengajarList.filter(m => m.id_kelas && m.id_mapel);
+        }
+
         await updateDoc(ref, toSave);
         if (colName === 'nilai' && toSave.status_koreksi === 'Sudah Dikoreksi') {
+          if (user?.role === 'Guru' || user?.role === 'Pengawas') {
+             api.call('add_activity_log', {
+                id_user: user.id || user.username,
+                nama_user: user.nama || user.username,
+                role: user.role,
+                aktivitas: `Mengoreksi nilai essay ujian untuk siswa ID: ${toSave.id_siswa || initialData.id_siswa}`
+             });
+          }
           toast('Nilai koreksi essay berhasil disimpan', 'success');
         } else {
           toast('Data berhasil diperbarui', 'success');
@@ -89,7 +115,11 @@ export function GenericModal({ isOpen, onClose, schema, initialData, colName }: 
         } else {
           const id = Math.random().toString(36).substr(2, 9);
           const ref = doc(db, colName, id);
-          await setDoc(ref, { ...formData, id });
+          const toCreate = { ...formData, id };
+          if (colName === 'guru') {
+            toCreate.mengajar = mengajarList.filter(m => m.id_kelas && m.id_mapel);
+          }
+          await setDoc(ref, toCreate);
         }
         toast('Data berhasil ditambahkan', 'success');
       }
@@ -169,6 +199,68 @@ export function GenericModal({ isOpen, onClose, schema, initialData, colName }: 
                           <option key={kls.id} value={kls.id}>{kls.nama || kls.id}</option>
                         ))}
                       </select>
+                    </div>
+                  );
+                }
+
+                if (c === 'mengajar' && colName === 'guru') {
+                  return (
+                    <div key={c} className="space-y-4 pt-2">
+                       <div className="flex justify-between items-center bg-slate-50 p-4 border border-slate-200 rounded-xl">
+                          <label className="block text-sm font-semibold text-slate-700">Daftar Kelas & Mapel (Mengajar)</label>
+                          <button 
+                             type="button"
+                             onClick={() => setMengajarList([...mengajarList, {id_kelas: '', id_mapel: ''}])}
+                             className="text-xs font-semibold bg-violet-100 text-violet-600 px-3 py-1.5 rounded-lg hover:bg-violet-200"
+                          >
+                             Tambah
+                          </button>
+                       </div>
+                       {mengajarList.map((m, idx) => (
+                          <div key={idx} className="flex gap-3 bg-white p-4 border border-slate-200 rounded-xl relative">
+                             <div className="flex-1 space-y-3">
+                                <div>
+                                   <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Kelas</label>
+                                   <select
+                                       required
+                                       value={m.id_kelas}
+                                       onChange={(e) => {
+                                          const newList = [...mengajarList];
+                                          newList[idx] = { ...newList[idx], id_kelas: e.target.value };
+                                          setMengajarList(newList);
+                                       }}
+                                       className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg text-sm text-slate-900 outline-none focus:border-violet-500"
+                                   >
+                                      <option value="">Pilih Kelas</option>
+                                      <option value="ALL">Semua Kelas</option>
+                                      {kelasList.map(kls => <option key={kls.id} value={kls.id}>{kls.nama || kls.id}</option>)}
+                                   </select>
+                                </div>
+                                <div>
+                                   <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Mapel</label>
+                                   <select
+                                       required
+                                       value={m.id_mapel}
+                                       onChange={(e) => {
+                                          const newList = [...mengajarList];
+                                          newList[idx] = { ...newList[idx], id_mapel: e.target.value };
+                                          setMengajarList(newList);
+                                       }}
+                                       className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg text-sm text-slate-900 outline-none focus:border-violet-500"
+                                   >
+                                      <option value="">Pilih Mata Pelajaran</option>
+                                      <option value="ALL">Semua Mata Pelajaran</option>
+                                      {mapelList.map(mpl => <option key={mpl.id} value={mpl.id}>{mpl.nama || mpl.id}</option>)}
+                                   </select>
+                                </div>
+                             </div>
+                             {mengajarList.length > 1 && (
+                                <button type="button" onClick={() => setMengajarList(mengajarList.filter((_, i) => i !== idx))} className="absolute top-2 right-2 text-slate-400 hover:text-red-500 p-1">
+                                   <X className="w-4 h-4" />
+                                </button>
+                             )}
+                          </div>
+                       ))}
                     </div>
                   );
                 }
@@ -377,7 +469,7 @@ export function GenericModal({ isOpen, onClose, schema, initialData, colName }: 
                   <div key={c}>
                     <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">{c.replace(/_/g, ' ')}</label>
                     <input 
-                      type={c.includes('password') ? 'password' : 'text'}
+                      type="text"
                       required
                       value={formData[c] || ''} 
                       onChange={e => setFormData({...formData, [c]: e.target.value})} 

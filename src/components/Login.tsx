@@ -28,6 +28,12 @@ export function Login() {
           setShowTokenModal(true);
         } else {
           login(res.data);
+          api.call('add_activity_log', {
+            id_user: res.data.id || res.data.username,
+            nama_user: res.data.nama || res.data.username,
+            role: res.data.role,
+            aktivitas: 'Login ke dalam sistem'
+          });
           toast("Login berhasil!", "success");
         }
       } else {
@@ -46,6 +52,12 @@ export function Login() {
       if (res.success) {
         setShowTokenModal(false);
         login(res.data);
+        api.call('add_activity_log', {
+          id_user: res.data.id || res.data.username,
+          nama_user: res.data.nama || res.data.username,
+          role: res.data.role,
+          aktivitas: 'Login ke dalam sistem'
+        });
         toast("Autentikasi berhasil!", "success");
       } else {
         toast(res.message || "Token Salah!", "error");
@@ -56,7 +68,12 @@ export function Login() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-slate-50 relative overflow-hidden p-4">
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.8 }}
+      className="flex items-center justify-center min-h-screen bg-slate-50 relative overflow-hidden p-4"
+    >
       {/* Decorative Background Blobs */}
       <div className="blob bg-fuchsia-400/30 w-96 h-96 rounded-full top-[-10%] left-[-10%] animate-[float_10s_ease-in-out_infinite]" />
       <div className="blob bg-violet-400/30 w-80 h-80 rounded-full bottom-[-10%] right-[-5%] animate-[float_12s_ease-in-out_infinite_reverse]" />
@@ -84,7 +101,7 @@ export function Login() {
           </h1>
           <div className="w-16 h-1 bg-violet-600 rounded-full mb-4 hidden md:block" />
           <p className="text-slate-500 text-sm font-bold leading-relaxed hidden md:block">
-            Selamat datang di Portal CBT SMART resmi. Akses ujian nyaman dengan LJK Digital interaktif dan proteksi termutakhir.
+            Selamat datang di Portal CBT SMART EXAM APP resmi. Akses ujian nyaman dengan LJK Digital interaktif dan proteksi termutakhir.
           </p>
 
           <div className="mt-8 p-3 bg-white backdrop-blur-md border border-slate-200 rounded-2xl flex items-center gap-3 w-full shadow-sm">
@@ -211,6 +228,6 @@ export function Login() {
         </div>
       )}
 
-    </div>
+    </motion.div>
   );
 }
