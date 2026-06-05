@@ -176,14 +176,6 @@ export function Login() {
                )}
             </button>
           </form>
-
-          <div className="mt-6 pt-4 border-t border-slate-200 text-center">
-            <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1.5">Preview Akses:</p>
-            <div className="flex justify-center gap-3 text-[10px] text-slate-500 font-semibold">
-              <span>Admin: <b className="text-violet-400">admin/edudigital</b></span>
-              <span>Siswa: <b className="text-violet-400">1001/123</b></span>
-            </div>
-          </div>
         </motion.div>
 
       </div>

@@ -23,6 +23,10 @@ export function GenericView({ menu }: { menu: string }) {
   const [filterMapel, setFilterMapel] = useState<string>('');
   const [filterKelas, setFilterKelas] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
+  
+  const [logDateStart, setLogDateStart] = useState<string>('');
+  const [logDateEnd, setLogDateEnd] = useState<string>('');
+  const [logNamaFilter, setLogNamaFilter] = useState<string>('');
 
   useEffect(() => {
     if (menu === 'data_cp' || menu === 'input_cp' || menu === 'rekap' || menu === 'katrol' || menu === 'monitor' || menu === 'data_guru' || menu === 'data_siswa' || menu === 'ujian') {
@@ -327,6 +331,28 @@ export function GenericView({ menu }: { menu: string }) {
       }
     }
 
+    if (menu === 'log_aktivitas') {
+      if (logNamaFilter && typeof row.nama_user === 'string' && !row.nama_user.toLowerCase().includes(logNamaFilter.toLowerCase())) {
+        return false;
+      }
+      if (logDateStart || logDateEnd) {
+        if (!row.timestamp) return false;
+        const rowDate = new Date(row.timestamp);
+        rowDate.setHours(0, 0, 0, 0);
+        
+        if (logDateStart) {
+          const start = new Date(logDateStart);
+          start.setHours(0, 0, 0, 0);
+          if (rowDate < start) return false;
+        }
+        if (logDateEnd) {
+          const end = new Date(logDateEnd);
+          end.setHours(0, 0, 0, 0);
+          if (rowDate > end) return false;
+        }
+      }
+    }
+
     if (searchQuery) {
       const searchableStr = Object.values(row).join(' ').toLowerCase();
       if (!searchableStr.includes(searchQuery.toLowerCase())) return false;
@@ -441,6 +467,32 @@ export function GenericView({ menu }: { menu: string }) {
             <button className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 w-10 h-10 rounded-full flex items-center justify-center shrink-0 btn-touch shadow-sm hidden sm:flex">
               <Filter className="w-4 h-4" />
             </button>
+          )}
+          {menu === 'log_aktivitas' && (
+            <div className="hidden sm:flex items-center gap-2 mr-2">
+              <input 
+                type="date"
+                value={logDateStart}
+                onChange={e => setLogDateStart(e.target.value)}
+                className="bg-white border border-slate-200 text-slate-700 h-10 px-4 rounded-full outline-none text-xs font-semibold focus:border-violet-500 w-32"
+                title="Tanggal Mulai"
+              />
+              <span className="text-slate-400">-</span>
+              <input 
+                type="date"
+                value={logDateEnd}
+                onChange={e => setLogDateEnd(e.target.value)}
+                className="bg-white border border-slate-200 text-slate-700 h-10 px-4 rounded-full outline-none text-xs font-semibold focus:border-violet-500 w-32"
+                title="Tanggal Akhir"
+              />
+              <input 
+                type="text"
+                value={logNamaFilter}
+                onChange={e => setLogNamaFilter(e.target.value)}
+                placeholder="Nama Guru..."
+                className="bg-white border border-slate-200 text-slate-700 h-10 px-4 rounded-full outline-none text-xs font-semibold focus:border-violet-500 w-40"
+              />
+            </div>
           )}
           {!['rekap', 'katrol', 'monitor', 'koreksi', 'log_aktivitas'].includes(menu) && (
             <button onClick={handleAdd} className="bg-violet-600 hover:bg-violet-700 text-white w-10 h-10 rounded-full flex items-center justify-center shrink-0 btn-touch shadow-[0_4px_15px_rgba(139,92,246,0.3)]">
