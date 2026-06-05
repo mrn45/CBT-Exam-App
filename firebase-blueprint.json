@@ -1,0 +1,147 @@
+{
+  "entities": {
+    "Setting": {
+      "title": "Setting",
+      "description": "Global Settings",
+      "type": "object",
+      "properties": {
+        "appName": { "type": "string" },
+        "adminName": { "type": "string" },
+        "current_token": { "type": "string" },
+        "token_expiry": { "type": "number" },
+        "namaSekolah": { "type": "string" },
+        "auto_katrol_kkm": { "type": "boolean" },
+        "logo_instansi": { "type": "string" }
+      },
+      "required": ["appName"]
+    },
+    "User": {
+      "title": "User",
+      "description": "User Document",
+      "type": "object",
+      "properties": {
+        "username": { "type": "string" },
+        "password": { "type": "string" },
+        "role": { "type": "string", "enum": ["Admin", "Pengawas", "Siswa"] },
+        "nama": { "type": "string" },
+        "id_kelas": { "type": "string" },
+        "id_mapel": { "type": "string" },
+        "nis": { "type": "string" },
+        "nip": { "type": "string" }
+      },
+      "required": ["username", "role", "nama"]
+    },
+    "Kelas": {
+      "title": "Kelas",
+      "description": "Class Room",
+      "type": "object",
+      "properties": {
+        "nama": { "type": "string" }
+      },
+      "required": ["nama"]
+    },
+    "Mapel": {
+      "title": "Mapel",
+      "description": "Mata Pelajaran",
+      "type": "object",
+      "properties": {
+        "nama": { "type": "string" }
+      },
+      "required": ["nama"]
+    },
+    "Ujian": {
+      "title": "Ujian",
+      "description": "Ujian Schedule",
+      "type": "object",
+      "properties": {
+        "id_mapel": { "type": "string" },
+        "id_kelas": { "type": "string" },
+        "judul": { "type": "string" },
+        "durasi": { "type": "number" },
+        "target_nilai": { "type": "number" },
+        "status": { "type": "string", "enum": ["Aktif", "Draft", "Sembunyi", "Selesai"] },
+        "file_pdf": { "type": "string" },
+        "jml_soal": { "type": "number" },
+        "jml_opsi": { "type": "number" },
+        "jml_essay": { "type": "number" },
+        "waktu_mulai": { "type": "string" },
+        "min_kumpul": { "type": "number" }
+      },
+      "required": ["judul", "id_mapel"]
+    },
+    "Soal": {
+      "title": "Soal",
+      "description": "Soal items for Ujian",
+      "type": "object",
+      "properties": {
+        "id_ujian": { "type": "string" },
+        "nomor": { "type": "number" },
+        "jawaban": { "type": "string" },
+        "tipe": { "type": "string", "enum": ["PG", "Essay"] }
+      },
+      "required": ["id_ujian", "nomor"]
+    },
+    "Nilai": {
+      "title": "Nilai",
+      "description": "Exam result per student",
+      "type": "object",
+      "properties": {
+        "id_ujian": { "type": "string" },
+        "id_siswa": { "type": "string" },
+        "nilai_asli": { "type": "number" },
+        "nilai_katrol": { "type": "number" },
+        "status": { "type": "string" },
+        "jawaban_essay": { "type": "string" },
+        "status_koreksi": { "type": "string" },
+        "createdAt": { "type": "number", "description": "Timestamp when the exam was completed" }
+      },
+      "required": ["id_ujian", "id_siswa"]
+    },
+    "Progres": {
+      "title": "Progres",
+      "description": "Exam progress per student",
+      "type": "object",
+      "properties": {
+        "id_ujian": { "type": "string" },
+        "id_siswa": { "type": "string" },
+        "status": { "type": "string" },
+        "terjawab": { "type": "number" }
+      },
+      "required": ["id_ujian", "id_siswa"]
+    }
+  },
+  "firestore": {
+    "settings": {
+      "schema": { "$ref": "#/entities/Setting" },
+      "description": "Global Settings Collection"
+    },
+    "users": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "Users Collection (Admin, Siswa, Guru)"
+    },
+    "kelas": {
+      "schema": { "$ref": "#/entities/Kelas" },
+      "description": "Kelas Collection"
+    },
+    "mapel": {
+      "schema": { "$ref": "#/entities/Mapel" },
+      "description": "Mapel Collection"
+    },
+    "ujian": {
+      "schema": { "$ref": "#/entities/Ujian" },
+      "description": "Ujian Collection"
+    },
+    "soal": {
+      "schema": { "$ref": "#/entities/Soal" },
+      "description": "Soal Collection"
+    },
+    "nilai": {
+      "schema": { "$ref": "#/entities/Nilai" },
+      "description": "Nilai Collection"
+    },
+    "progres": {
+      "schema": { "$ref": "#/entities/Progres" },
+      "description": "Progres Collection"
+    }
+  }
+}
