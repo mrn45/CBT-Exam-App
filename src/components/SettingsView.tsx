@@ -10,7 +10,8 @@ export function SettingsView() {
     appName: '', 
     adminName: '', 
     namaSekolah: '',
-    logo_instansi: ''
+    logo_instansi: '',
+    fitur_katrol: true
   });
   
 
@@ -21,7 +22,8 @@ export function SettingsView() {
         appName: settings.appName, 
         adminName: settings.adminName, 
         namaSekolah: settings.namaSekolah,
-        logo_instansi: settings.logo_instansi || ''
+        logo_instansi: settings.logo_instansi || '',
+        fitur_katrol: settings.fitur_katrol !== false
       });
     }
   }, [settings]);
@@ -92,6 +94,16 @@ export function SettingsView() {
             placeholder="https://example.com/logo.png"
             className="w-full bg-slate-50 border border-slate-200 p-4 rounded-xl text-slate-900 outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-500/10 smooth-transition" 
           />
+        </div>
+        <div className="flex items-center gap-3">
+          <label className="text-sm font-semibold text-slate-700">Fitur Katrol Nilai</label>
+          <button
+            type="button"
+            onClick={() => setFormData({...formData, fitur_katrol: !formData.fitur_katrol})}
+            className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors ${formData.fitur_katrol ? 'bg-emerald-500' : 'bg-slate-300'}`}
+          >
+            <div className={`w-4 h-4 bg-white rounded-full transition-transform ${formData.fitur_katrol ? 'transform translate-x-6' : ''}`} />
+          </button>
         </div>
         <div className="pt-4">
           <button type="submit" className="w-full sm:w-auto bg-violet-600 hover:bg-violet-700 text-white font-medium py-3 px-8 rounded-full flex items-center justify-center gap-2 btn-touch shadow-[0_4px_15px_rgba(139,92,246,0.3)]">

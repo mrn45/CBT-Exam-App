@@ -26,7 +26,9 @@ export interface Ujian {
   jml_opsi: number;
   jml_essay: number;
   waktu_mulai: string;
-  min_kumpul: number;
+  min_kumpul?: number;
+  minimal_waktu?: number;
+  nilai_kkm?: number;
   nama_kelas?: string;
   nama_mapel?: string;
   status_pengerjaan?: 'Selesai' | 'Mengerjakan' | 'Belum Mulai';
@@ -47,6 +49,7 @@ export interface Settings {
   namaSekolah: string;
   auto_katrol_kkm: boolean;
   logo_instansi: string;
+  fitur_katrol?: boolean;
 }
 
 export interface DashboardStats {

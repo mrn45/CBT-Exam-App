@@ -22,6 +22,7 @@ export function ExamRoom({ exam, onComplete }: { exam: Ujian, onComplete: () => 
   const [timeLeft, setTimeLeft] = useState(exam.durasi * 60);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const answersRef = useRef<Record<string, string>>({});
+  const videoRef = useRef<HTMLVideoElement>(null);
   const [submitting, setSubmitting] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const violationCountRef = useRef(0);
@@ -85,6 +86,47 @@ export function ExamRoom({ exam, onComplete }: { exam: Ujian, onComplete: () => 
   }, [answeredCount, exam.id, user?.id_siswa]);
 
   useEffect(() => {
+    // Camera Setup
+    let stream: MediaStream | null = null;
+    let snapshotTimer: any = null;
+    
+    const startCamera = async () => {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+
+        // Function to take and send snapshot
+        const takeSnapshot = () => {
+          if (videoRef.current && user?.id_siswa && exam?.id) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 160;
+            canvas.height = 120;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+              const base64Img = canvas.toDataURL('image/jpeg', 0.4);
+              api.call('update_camera_snapshot', {
+                 id_ujian: exam.id,
+                 id_siswa: user.id_siswa,
+                 snapshot: base64Img
+              });
+            }
+          }
+        };
+
+        // Take first snapshot quickly
+        setTimeout(takeSnapshot, 1000);
+
+        // Start taking snapshots without delay (every 200 milliseconds for near real-time)
+        snapshotTimer = setInterval(takeSnapshot, 200);
+      } catch (err) {
+        console.error("Camera access denied or error:", err);
+      }
+    };
+    startCamera();
+
     const handleViolation = (message: string) => {
       violationCountRef.current += 1;
       if (violationCountRef.current > 3) {
@@ -115,6 +157,13 @@ export function ExamRoom({ exam, onComplete }: { exam: Ujian, onComplete: () => 
     return () => {
       window.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('blur', handleBlur);
+      // Stop camera stream
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+      if (snapshotTimer) {
+        clearInterval(snapshotTimer);
+      }
     };
   }, []);
 
@@ -124,7 +173,7 @@ export function ExamRoom({ exam, onComplete }: { exam: Ujian, onComplete: () => 
 
   const handleSubmit = async () => {
     const timeUsed = (exam.durasi * 60) - timeLeft;
-    const minTime = exam.min_kumpul * 60;
+    const minTime = (Number(exam.min_kumpul) || 0) * 60;
     
     if (timeUsed < minTime) {
       toast(`Belum mencapai batas minimal waktu kumpul (${formatTime(minTime - timeUsed)} lagi)`, 'warning');
@@ -307,6 +356,20 @@ export function ExamRoom({ exam, onComplete }: { exam: Ujian, onComplete: () => 
            </div>
         </div>
       )}
+
+      {/* Floating Camera Preview */}
+      <div className="fixed bottom-4 left-4 z-[40] w-24 h-32 sm:w-32 sm:h-40 xl:w-40 xl:h-48 bg-slate-200 border-2 border-white shadow-2xl rounded-2xl overflow-hidden pointer-events-none fade-in">
+        <video 
+          ref={videoRef}
+          className="w-full h-full object-cover transform -scale-x-100"
+          autoPlay 
+          playsInline 
+          muted 
+        />
+        <div className="absolute top-2 left-2 bg-red-500 text-white text-[8px] sm:text-[10px] px-1.5 py-0.5 rounded-full font-bold animate-pulse flex items-center gap-1">
+          <div className="w-1.5 h-1.5 bg-white rounded-full"></div> REC
+        </div>
+      </div>
 
     </div>
   );

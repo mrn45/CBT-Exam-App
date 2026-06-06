@@ -40,12 +40,25 @@ export function GenericModal({ isOpen, onClose, schema, initialData, colName }: 
           const kelasSnap = await getDocs(collection(db, 'kelas'));
           
           let fetchedMapel = mapelSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-          if (user?.role === 'Pengawas' && user?.id_mapel && user.id_mapel !== 'ALL') {
-             fetchedMapel = fetchedMapel.filter(m => m.id === user.id_mapel);
+          if (user?.role === 'Pengawas' && user?.mengajar && Array.isArray(user.mengajar)) {
+            const allowedMapel = user.mengajar.map((m: any) => m.id_mapel);
+            const isAllMapel = allowedMapel.includes('ALL');
+            if (!isAllMapel) {
+              fetchedMapel = fetchedMapel.filter(m => allowedMapel.includes(m.id));
+            }
+          }
+          
+          let fetchedKelas = kelasSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+          if (user?.role === 'Pengawas' && user?.mengajar && Array.isArray(user.mengajar)) {
+            const allowedKelas = user.mengajar.map((m: any) => m.id_kelas);
+            const isAllKelas = allowedKelas.includes('ALL');
+            if (!isAllKelas) {
+              fetchedKelas = fetchedKelas.filter(k => allowedKelas.includes(k.id));
+            }
           }
           
           setMapelList(fetchedMapel);
-          setKelasList(kelasSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+          setKelasList(fetchedKelas);
         } catch (e) {
           console.error("Failed to load mapel/kelas: ", e);
         }
@@ -308,6 +321,29 @@ export function GenericModal({ isOpen, onClose, schema, initialData, colName }: 
                         required
                         value={formData[c] || ''} 
                         onChange={e => setFormData({...formData, [c]: e.target.value})} 
+                        className="w-full bg-slate-50 border border-slate-200 p-3.5 rounded-xl text-slate-900 outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-500/10 smooth-transition" 
+                      />
+                    </div>
+                  );
+                }
+
+                if (c === 'nilai_kkm' || c === 'min_kumpul' || c === 'durasi_menit' || c === 'jml_soal' || c === 'jml_essay') {
+                  const labelMap: Record<string, string> = {
+                     nilai_kkm: 'Nilai KKM',
+                     min_kumpul: 'Minimal Waktu Pengumpulan (Menit)',
+                     durasi_menit: 'Durasi (Menit)',
+                     jml_soal: 'Jumlah Soal Pilihan Ganda',
+                     jml_essay: 'Jumlah Soal Essay'
+                  };
+                  return (
+                    <div key={c}>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">{labelMap[c] || c.replace(/_/g, ' ')}</label>
+                      <input 
+                        type="number"
+                        min="0"
+                        required
+                        value={formData[c] || ''} 
+                        onChange={e => setFormData({...formData, [c]: Number(e.target.value)})} 
                         className="w-full bg-slate-50 border border-slate-200 p-3.5 rounded-xl text-slate-900 outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-500/10 smooth-transition" 
                       />
                     </div>

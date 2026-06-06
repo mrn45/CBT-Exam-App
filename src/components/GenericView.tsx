@@ -37,8 +37,24 @@ export function GenericView({ menu }: { menu: string }) {
           const kelasSnap = await getDocs(collection(db, 'kelas'));
           const siswaSnap = await getDocs(collection(db, 'siswa'));
           const ujianSnap = await getDocs(collection(db, 'ujian'));
-          setMapelList(mapelSnap.docs.map(d => ({ id: d.id, ...d.data() })));
-          setKelasList(kelasSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+          let mList = mapelSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+          if (user?.role === 'Pengawas' && user?.mengajar && Array.isArray(user.mengajar)) {
+            const allowedMapel = user.mengajar.map((m: any) => m.id_mapel);
+            const isAllMapel = allowedMapel.includes('ALL');
+            if (!isAllMapel) {
+              mList = mList.filter(m => allowedMapel.includes(m.id));
+            }
+          }
+          setMapelList(mList);
+          let kList = kelasSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+          if (user?.role === 'Pengawas' && user?.mengajar && Array.isArray(user.mengajar)) {
+            const allowedKelas = user.mengajar.map((m: any) => m.id_kelas);
+            const isAllKelas = allowedKelas.includes('ALL');
+            if (!isAllKelas) {
+              kList = kList.filter(k => allowedKelas.includes(k.id));
+            }
+          }
+          setKelasList(kList);
           setSiswaList(siswaSnap.docs.map(d => ({ id: d.id, ...d.data() })));
           setUjianList(ujianSnap.docs.map(d => ({ id: d.id, ...d.data() })));
         } catch (e) {
@@ -107,7 +123,7 @@ export function GenericView({ menu }: { menu: string }) {
     if (menu === 'data_siswa') return ['nama', 'username', 'password', 'nis', 'id_kelas'];
     if (menu === 'data_cp' || menu === 'input_cp') return ['id_mapel', 'id_kelas', 'capaian_pembelajaran', 'deskripsi'];
     if (menu === 'bank_soal') return ['id_ujian', 'pertanyaan', 'opsi_a', 'opsi_b', 'opsi_c', 'opsi_d', 'opsi_e', 'jawaban_benar'];
-    if (menu === 'ujian') return ['judul', 'id_mapel', 'id_kelas', 'waktu_mulai', 'durasi_menit', 'jml_soal', 'jml_essay', 'jml_opsi', 'status', 'file_pdf'];
+    if (menu === 'ujian') return ['judul', 'id_mapel', 'id_kelas', 'waktu_mulai', 'durasi_menit', 'min_kumpul', 'jml_soal', 'jml_essay', 'jml_opsi', 'nilai_kkm', 'status', 'file_pdf'];
     if (menu === 'rekap' || menu === 'katrol') return ['id_siswa', 'nilai_asli', 'nilai_harian', 'nilai_tugas', 'nilai_katrol', 'status', 'status_koreksi'];
     if (menu === 'koreksi') return ['id_ujian', 'id_siswa', 'nilai_asli', 'status', 'jawaban_essay', 'status_koreksi'];
     if (menu === 'monitor') return ['id_ujian', 'id_siswa', 'status', 'terjawab'];
@@ -688,6 +704,26 @@ export function GenericView({ menu }: { menu: string }) {
                           <span className="truncate max-w-[200px] inline-block align-bottom font-medium text-slate-700">
                              {ujianList.find(u => u.id === row[c])?.judul || row[c]}
                           </span>
+                        ) : c === 'nilai_asli' || c === 'nilai_katrol' ? (
+                          <div className="flex flex-col gap-1 items-start">
+                             <span className={`font-bold ${row[c] !== undefined && row[c] !== null && row[c] !== '' ? 'px-2 py-1 bg-slate-100 rounded text-slate-800' : 'text-slate-400 italic'}`}>
+                               {row[c] !== undefined && row[c] !== null && row[c] !== '' ? row[c] : 'Belum Ada'}
+                             </span>
+                             {(() => {
+                               const ujk = ujianList.find(u => u.id === row.id_ujian);
+                               if (ujk && (ujk.nilai_kkm !== undefined && ujk.nilai_kkm !== null && ujk.nilai_kkm !== '')) {
+                                  const cVal = Number(row[c]);
+                                  const isPass = cVal >= Number(ujk.nilai_kkm);
+                                  const hasScore = row[c] !== undefined && row[c] !== null && row[c] !== '';
+                                  return (
+                                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${!hasScore ? 'bg-slate-100 text-slate-500' : isPass ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                                      KKM: {ujk.nilai_kkm} {hasScore ? (isPass ? '(Lulus)' : '(Remedial)') : ''}
+                                    </span>
+                                  );
+                               }
+                               return null;
+                             })()}
+                          </div>
                         ) : c === 'timestamp' && typeof row[c] === 'number' ? (
                           <span className="truncate max-w-[200px] inline-block align-bottom font-medium text-slate-700">
                              {new Date(row[c]).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}

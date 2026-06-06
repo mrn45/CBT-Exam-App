@@ -3,7 +3,7 @@ import { useApp } from '../lib/context';
 import { 
   Layers, LogOut, Menu, X, LayoutDashboard, Users,
   GraduationCap, Target, FileText, PieChart, Settings,
-  Radio, PenTool, Scale, BookOpen, Activity
+  Radio, PenTool, Scale, BookOpen, Activity, Camera
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
@@ -13,10 +13,12 @@ import { PengawasHome } from './PengawasHome';
 import { GenericView } from './GenericView';
 import { SettingsView } from './SettingsView';
 import { ExamRoom } from './ExamRoom';
+import CameraMonitor from './CameraMonitor';
+import KatrolNilaiAsli from './KatrolNilaiAsli';
 import { Ujian } from '../types';
 
 export function Dashboard() {
-  const { user, logout } = useApp();
+  const { user, settings, logout } = useApp();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeMenu, setActiveMenu] = useState('home');
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -48,6 +50,7 @@ export function Dashboard() {
     { type: 'label', label: 'Manajemen Ujian' },
     { id: 'ujian', icon: FileText, label: 'Bank Ujian' },
     { id: 'monitor', icon: Radio, label: 'Live Monitor' },
+    { id: 'panta_kamera', icon: Camera, label: 'Pantau Kamera' },
     { id: 'rekap', icon: PieChart, label: 'Rekap Nilai' },
     { type: 'label', label: 'Sistem' },
     { id: 'log_aktivitas', icon: Activity, label: 'Log Aktivitas' },
@@ -59,7 +62,9 @@ export function Dashboard() {
     { type: 'label', label: 'Aktivitas Ujian' },
     { id: 'input_cp', icon: Target, label: 'Input CP' },
     { id: 'monitor', icon: Radio, label: 'Live Monitor' },
+    { id: 'panta_kamera', icon: Camera, label: 'Pantau Kamera' },
     { id: 'koreksi', icon: PenTool, label: 'Koreksi Essay' },
+    { id: 'katrol_asli', icon: Scale, label: 'Katrol Nilai Asli' },
     { id: 'katrol', icon: Scale, label: 'Nilai Akhir' },
   ];
 
@@ -67,7 +72,10 @@ export function Dashboard() {
     { id: 'home', icon: LayoutDashboard, label: 'Beranda Ujian' },
   ];
 
-  const activeMenus = user?.role === 'Admin' ? menusAdmin : user?.role === 'Pengawas' ? menusPengawas : menusSiswa;
+  const activeMenus = (user?.role === 'Admin' ? menusAdmin : user?.role === 'Pengawas' ? menusPengawas : menusSiswa).filter(m => {
+    if (m.id === 'katrol_asli' && settings?.fitur_katrol === false) return false;
+    return true;
+  });
 
   const renderContent = () => {
     switch (activeMenu) {
@@ -75,6 +83,8 @@ export function Dashboard() {
         return user?.role === 'Admin' ? <AdminHome /> : user?.role === 'Siswa' ? <StudentHome onStartExam={setActiveExam} /> : <PengawasHome onNavigate={setActiveMenu} />;
       default:
         if (activeMenu === 'settings') return <div className="p-4 md:p-8 w-full flex justify-center"><SettingsView /></div>;
+        if (activeMenu === 'panta_kamera') return <div className="p-4 md:p-8 w-full flex justify-center"><CameraMonitor /></div>;
+        if (activeMenu === 'katrol_asli') return <div className="p-4 md:p-8 w-full flex justify-center"><KatrolNilaiAsli /></div>;
         return <div className="p-4 md:p-8 w-full flex justify-center"><GenericView menu={activeMenu} /></div>;
     }
   };

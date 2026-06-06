@@ -1,7 +1,7 @@
 {
-  "name": "CBTCerdasAdmin",
+  "name": "cbt-cerdas-admin",
   "description": "Admin dashboard for CBT Cerdas application.",
-  "requestFramePermissions": [],
+  "requestFramePermissions": ["camera"],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
   ]
