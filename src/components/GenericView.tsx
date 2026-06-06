@@ -286,30 +286,37 @@ export function GenericView({ menu }: { menu: string }) {
       if (file) {
         toast(`Mengimpor data dari ${file.name}...`, 'success');
         try {
-          const reader = new FileReader();
-          reader.onload = async (evt) => {
-            const bstr = evt.target?.result;
-            const wb = XLSX.read(bstr, { type: 'binary' });
-            const wsname = wb.SheetNames[0];
-            const ws = wb.Sheets[wsname];
-            const jsonData = XLSX.utils.sheet_to_json(ws);
+            const reader = new FileReader();
+            reader.onload = async (evt) => {
+              const arrayBuffer = evt.target?.result as ArrayBuffer;
+              const dataBuffer = new Uint8Array(arrayBuffer);
+              const wb = XLSX.read(dataBuffer, { type: 'array' });
+              const wsname = wb.SheetNames[0];
+              const ws = wb.Sheets[wsname];
+              const jsonData = XLSX.utils.sheet_to_json(ws);
             
             let count = 0;
             const colName = getColName();
             
-            for (const row of jsonData as any[]) {
+            for (const rawRow of jsonData as any[]) {
+               // Normalize keys
+               const row: any = {};
+               for (const key in rawRow) {
+                 row[key.trim().toLowerCase()] = rawRow[key];
+               }
+               
                const id = Math.random().toString(36).substr(2, 9);
                const toSave: any = { id };
                
                if (menu === 'data_guru') {
-                 toSave.nama = String(row.nama ?? row.Nama ?? '');
-                 toSave.username = String(row.username ?? row.Username ?? '');
-                 toSave.password = String(row.password ?? row.Password ?? '123456');
-                 toSave.nip = String(row.nip ?? row.NIP ?? '');
+                 toSave.nama = String(row.nama ?? '').trim();
+                 toSave.username = String(row.username ?? '').trim();
+                 toSave.password = String(row.password ?? '123456').trim();
+                 toSave.nip = String(row.nip ?? '').trim();
                  
-                 const mengajarStr = String(row.mengajar ?? row.Mengajar ?? '');
+                 const mengajarStr = String(row.mengajar ?? '').trim();
                  const mengajarArr: any[] = [];
-                 if (mengajarStr && mengajarStr.trim() !== '') {
+                 if (mengajarStr && mengajarStr !== '') {
                     const pairs = mengajarStr.split(';');
                     for (const p of pairs) {
                        const parts = p.split(':');
@@ -320,11 +327,11 @@ export function GenericView({ menu }: { menu: string }) {
                  }
                  toSave.mengajar = mengajarArr;
                } else if (menu === 'data_siswa') {
-                 toSave.nama = String(row.nama ?? row.Nama ?? '');
-                 toSave.username = String(row.username ?? row.Username ?? '');
-                 toSave.password = String(row.password ?? row.Password ?? '123456');
-                 toSave.nis = String(row.nis ?? row.NIS ?? '');
-                 toSave.id_kelas = String(row.id_kelas ?? row['id kelas'] ?? row.kelas ?? row.Kelas ?? '');
+                 toSave.nama = String(row.nama ?? '').trim();
+                 toSave.username = String(row.username ?? '').trim();
+                 toSave.password = String(row.password ?? '123456').trim();
+                 toSave.nis = String(row.nis ?? '').trim();
+                 toSave.id_kelas = String(row.id_kelas ?? row['id kelas'] ?? row.kelas ?? '').trim();
                }
                
                if (toSave.nama && toSave.username) {
@@ -335,7 +342,7 @@ export function GenericView({ menu }: { menu: string }) {
             
             toast(`Berhasil mengimpor ${count} data ${title}.`, 'success');
           };
-          reader.readAsBinaryString(file);
+          reader.readAsArrayBuffer(file);
         } catch (err: any) {
           toast('Gagal mengimpor file: ' + err.message, 'error');
         }
