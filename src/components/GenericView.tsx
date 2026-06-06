@@ -302,12 +302,12 @@ export function GenericView({ menu }: { menu: string }) {
                const toSave: any = { id };
                
                if (menu === 'data_guru') {
-                 toSave.nama = row.nama || String(row.Nama || '');
-                 toSave.username = row.username || String(row.Username || '');
-                 toSave.password = String(row.password || row.Password || '123456');
-                 toSave.nip = String(row.nip || row.NIP || '');
+                 toSave.nama = String(row.nama ?? row.Nama ?? '');
+                 toSave.username = String(row.username ?? row.Username ?? '');
+                 toSave.password = String(row.password ?? row.Password ?? '123456');
+                 toSave.nip = String(row.nip ?? row.NIP ?? '');
                  
-                 const mengajarStr = String(row.mengajar || row.Mengajar || '');
+                 const mengajarStr = String(row.mengajar ?? row.Mengajar ?? '');
                  const mengajarArr: any[] = [];
                  if (mengajarStr && mengajarStr.trim() !== '') {
                     const pairs = mengajarStr.split(';');
@@ -320,11 +320,11 @@ export function GenericView({ menu }: { menu: string }) {
                  }
                  toSave.mengajar = mengajarArr;
                } else if (menu === 'data_siswa') {
-                 toSave.nama = row.nama || String(row.Nama || '');
-                 toSave.username = row.username || String(row.Username || '');
-                 toSave.password = String(row.password || row.Password || '123456');
-                 toSave.nis = String(row.nis || row.NIS || '');
-                 toSave.id_kelas = String(row.id_kelas || row['id kelas'] || row.kelas || row.Kelas || '');
+                 toSave.nama = String(row.nama ?? row.Nama ?? '');
+                 toSave.username = String(row.username ?? row.Username ?? '');
+                 toSave.password = String(row.password ?? row.Password ?? '123456');
+                 toSave.nis = String(row.nis ?? row.NIS ?? '');
+                 toSave.id_kelas = String(row.id_kelas ?? row['id kelas'] ?? row.kelas ?? row.Kelas ?? '');
                }
                
                if (toSave.nama && toSave.username) {

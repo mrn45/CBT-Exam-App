@@ -210,40 +210,57 @@ class FirestoreAPI {
         await updateDoc(doc(db, 'settings', 'global'), { current_token: newToken, token_expiry: newExpiry });
         return { success: true, data: { token: newToken, expiry: newExpiry } };
       
-      case 'login': 
-        const uSnap = await getDocs(query(collection(db, 'users'), where('username', '==', payload.username), where('password', '==', payload.password)));
+      case 'login': {
+        const usernameStr = String(payload.username || '').trim();
+        const passwordStr = String(payload.password || '').trim();
+        const usernameNum = Number(usernameStr);
+        const usernamesToTry = isNaN(usernameNum) ? [usernameStr] : [usernameStr, usernameNum];
+
+        const uSnap = await getDocs(query(collection(db, 'users'), where('username', 'in', usernamesToTry)));
         if (!uSnap.empty) {
-          const u: any = { id: uSnap.docs[0].id, ...uSnap.docs[0].data() };
-          if (u.role === 'Siswa') {
-            const sSnap = await getDocs(query(collection(db, 'siswa'), where('username', '==', payload.username)));
-            if (!sSnap.empty) {
-              const s: any = sSnap.docs[0].data();
-              return { success: true, require_token: true, temp_data: { ...u, id_siswa: sSnap.docs[0].id, id_kelas: s.id_kelas } };
+          const matchedUser = uSnap.docs.find(d => String(d.data().password || '').trim() === passwordStr);
+          if (matchedUser) {
+            const u: any = { id: matchedUser.id, ...matchedUser.data() };
+            if (u.role === 'Siswa') {
+              const sSnap = await getDocs(query(collection(db, 'siswa'), where('username', 'in', usernamesToTry)));
+              if (!sSnap.empty) {
+                const s: any = sSnap.docs[0].data();
+                return { success: true, require_token: true, temp_data: { ...u, id_siswa: sSnap.docs[0].id, id_kelas: s.id_kelas } };
+              }
             }
-          }
-          if (u.role === 'Pengawas') {
-            const gSnap = await getDocs(query(collection(db, 'guru'), where('username', '==', payload.username)));
-            if (!gSnap.empty) {
-              const g: any = { id: gSnap.docs[0].id, ...gSnap.docs[0].data() };
-              u.mengajar = g.mengajar; u.id = g.id;
+            if (u.role === 'Pengawas') {
+              const gSnap = await getDocs(query(collection(db, 'guru'), where('username', 'in', usernamesToTry)));
+              if (!gSnap.empty) {
+                const g: any = { id: gSnap.docs[0].id, ...gSnap.docs[0].data() };
+                u.mengajar = g.mengajar; u.id = g.id;
+              }
             }
+            return { success: true, data: u };
           }
-          return { success: true, data: u };
-        } else {
-          // Check Guru
-          const gSnap = await getDocs(query(collection(db, 'guru'), where('username', '==', payload.username), where('password', '==', payload.password)));
-          if (!gSnap.empty) {
-            const g = { id: gSnap.docs[0].id, ...gSnap.docs[0].data() } as any;
+        }
+
+        // Check Guru
+        const gSnap = await getDocs(query(collection(db, 'guru'), where('username', 'in', usernamesToTry)));
+        if (!gSnap.empty) {
+          const matchedGuru = gSnap.docs.find(d => String(d.data().password || '').trim() === passwordStr);
+          if (matchedGuru) {
+            const g = { id: matchedGuru.id, ...matchedGuru.data() } as any;
             return { success: true, data: { id: g.id, username: g.username, role: 'Pengawas', nama: g.nama, mengajar: g.mengajar } };
           }
-          // Check Siswa
-          const sSnap = await getDocs(query(collection(db, 'siswa'), where('username', '==', payload.username), where('password', '==', payload.password)));
-          if (!sSnap.empty) {
-            const s = { id: sSnap.docs[0].id, ...sSnap.docs[0].data() } as any;
+        }
+
+        // Check Siswa
+        const sSnap = await getDocs(query(collection(db, 'siswa'), where('username', 'in', usernamesToTry)));
+        if (!sSnap.empty) {
+          const matchedSiswa = sSnap.docs.find(d => String(d.data().password || '').trim() === passwordStr);
+          if (matchedSiswa) {
+            const s = { id: matchedSiswa.id, ...matchedSiswa.data() } as any;
             return { success: true, require_token: true, temp_data: { id: s.id, username: s.username, role: 'Siswa', nama: s.nama, id_siswa: s.id, id_kelas: s.id_kelas } };
           }
         }
+
         return { success: false, message: 'Akun salah / tidak ditemukan!' };
+      }
       
       case 'verify_token': {
         const tkSetDoc = await getDoc(doc(db, 'settings', 'global'));
