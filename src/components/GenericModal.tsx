@@ -333,7 +333,7 @@ export function GenericModal({ isOpen, onClose, schema, initialData, colName }: 
                      min_kumpul: 'Minimal Waktu Pengumpulan (Menit)',
                      durasi_menit: 'Durasi (Menit)',
                      jml_soal: 'Jumlah Soal Pilihan Ganda',
-                     jml_essay: 'Jumlah Soal Essay'
+                     jml_essay: 'Jumlah Soal Essay (Opsional)'
                   };
                   return (
                     <div key={c}>
@@ -341,9 +341,9 @@ export function GenericModal({ isOpen, onClose, schema, initialData, colName }: 
                       <input 
                         type="number"
                         min="0"
-                        required
-                        value={formData[c] || ''} 
-                        onChange={e => setFormData({...formData, [c]: Number(e.target.value)})} 
+                        required={c !== 'jml_essay'}
+                        value={formData[c] ?? ''} 
+                        onChange={e => setFormData({...formData, [c]: e.target.value === '' ? '' : Number(e.target.value)})} 
                         className="w-full bg-slate-50 border border-slate-200 p-3.5 rounded-xl text-slate-900 outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-500/10 smooth-transition" 
                       />
                     </div>

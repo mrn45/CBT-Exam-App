@@ -120,7 +120,7 @@ export function Dashboard() {
             <div className="w-10 h-10 rounded-xl bg-violet-600 text-white flex items-center justify-center shadow-[0_0_15px_rgba(139,92,246,0.4)]">
               <Layers className="w-5 h-5" />
             </div>
-            <span className="font-bold text-2xl text-slate-900 tracking-tight">CBT.</span>
+            <span className="font-bold text-2xl text-slate-900 tracking-tight">CBT SMART APP</span>
           </div>
           <button onClick={toggleSidebar} className="md:hidden text-slate-500 hover:text-slate-900 bg-white border border-slate-200 w-8 h-8 rounded-full flex items-center justify-center">
             <X className="w-4 h-4" />
