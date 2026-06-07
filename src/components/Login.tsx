@@ -101,7 +101,7 @@ export function Login() {
           </h1>
           <div className="w-16 h-1 bg-violet-600 rounded-full mb-4 hidden md:block" />
           <p className="text-slate-500 text-sm font-bold leading-relaxed hidden md:block">
-            Selamat datang di Portal CBT SMART EXAM APP resmi. Akses ujian nyaman dengan LJK Digital interaktif dan proteksi termutakhir.
+            Selamat datang di Portal CBT SMART APP resmi. Akses ujian nyaman dengan LJK Digital interaktif dan proteksi termutakhir.
           </p>
 
           <div className="mt-8 p-3 bg-white backdrop-blur-md border border-slate-200 rounded-2xl flex items-center gap-3 w-full shadow-sm">

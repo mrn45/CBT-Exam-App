@@ -6,7 +6,7 @@ const dPDF = 'data:application/pdf;base64,JVBERi0xLjcKCjEgMCBvYmogICUgZW50cnkgcG
 const pastTimeStr = new Date(Date.now() - 3600000).toISOString().slice(0, 16);
 
 // SEEDER DATA
-const mockSettings: Settings = { appName: 'CBT Cerdas', adminName: 'Ahmad Hanafi', current_token: 'A1B2C3', token_expiry: Date.now() + 300000, namaSekolah: 'SMP Islam Assyafiiyah', auto_katrol_kkm: true, logo_instansi: '', fitur_katrol: true };
+const mockSettings: Settings = { appName: 'CBT SMART APP', adminName: 'Ahmad Hanafi', current_token: 'A1B2C3', token_expiry: Date.now() + 300000, namaSekolah: 'SMP Islam Assyafiiyah', auto_katrol_kkm: true, logo_instansi: '', fitur_katrol: true };
 const mockUsers = [ 
   { id: 'U1', username: 'admin', password: '51001n', role: 'Admin', nama: 'Administrator' }
 ];
