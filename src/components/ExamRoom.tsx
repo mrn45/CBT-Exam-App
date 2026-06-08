@@ -87,6 +87,25 @@ export function ExamRoom({ exam, onComplete }: { exam: Ujian, onComplete: () => 
   }, [answeredCount, exam.id, user?.id_siswa]);
 
   useEffect(() => {
+    const statusTimer = setInterval(async () => {
+      if (exam?.id && user?.id_siswa) {
+        try {
+          const res = await api.call('check_progres_status', {
+            id_ujian: exam.id,
+            id_siswa: user.id_siswa
+          });
+          if (res.force_submit) {
+            forceSubmit('Ujian dihentikan paksa oleh Admin/Pengawas.');
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    }, 5000);
+    return () => clearInterval(statusTimer);
+  }, [exam?.id, user?.id_siswa]);
+
+  useEffect(() => {
     // Camera Setup
     let stream: MediaStream | null = null;
     let snapshotTimer: any = null;

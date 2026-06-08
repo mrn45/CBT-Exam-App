@@ -141,14 +141,14 @@ export function Dashboard() {
 
         <nav className="flex-1 overflow-y-auto px-4 py-4 space-y-1 custom-scrollbar">
           {activeMenus.map((item, idx) => {
-            if (item.type === 'label') {
+            if ('type' in item && item.type === 'label') {
               return (
                 <div key={`label-${idx}`} className="px-3 py-2 text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-4 mb-1">
                   {item.label}
                 </div>
               );
             }
-            if (item.id) {
+            if ('id' in item && item.id) {
               const Icon = item.icon!;
               const isActive = activeMenu === item.id;
               return (

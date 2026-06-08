@@ -142,7 +142,7 @@ class FirestoreAPI {
     return () => {};
   }
 
-  async call(action: string, payload: any = {}): Promise<{ success: boolean; data?: any; message?: string; require_token?: boolean; temp_data?: any }> {
+  async call(action: string, payload: any = {}): Promise<{ success: boolean; data?: any; message?: string; require_token?: boolean; temp_data?: any; force_submit?: boolean }> {
     await ensureSeeded();
     
     try {
@@ -394,6 +394,16 @@ class FirestoreAPI {
           await updateDoc(doc(db, 'progres', fsQ.docs[0].id), { force_submit: true });
         }
         return { success: true };
+
+      case 'check_progres_status':
+        const cpQ = await getDocs(query(collection(db, 'progres'), where('id_ujian', '==', payload.id_ujian), where('id_siswa', '==', payload.id_siswa)));
+        if (!cpQ.empty) {
+          const progData = cpQ.docs[0].data();
+          if (progData.force_submit) {
+            return { success: true, force_submit: true };
+          }
+        }
+        return { success: true, force_submit: false };
 
       case 'update_camera_snapshot':
         const snapQ = await getDocs(query(collection(db, 'progres'), where('id_ujian', '==', payload.id_ujian), where('id_siswa', '==', payload.id_siswa)));
