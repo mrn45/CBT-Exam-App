@@ -26,6 +26,7 @@ export function ExamRoom({ exam, onComplete }: { exam: Ujian, onComplete: () => 
   const [submitting, setSubmitting] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const violationCountRef = useRef(0);
+  const [cameraGranted, setCameraGranted] = useState<boolean | null>(null);
 
   const [unansweredList, setUnansweredList] = useState<number[]>([]);
 
@@ -96,6 +97,7 @@ export function ExamRoom({ exam, onComplete }: { exam: Ujian, onComplete: () => 
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
         }
+        setCameraGranted(true);
 
         // Function to take and send snapshot
         const takeSnapshot = () => {
@@ -123,6 +125,7 @@ export function ExamRoom({ exam, onComplete }: { exam: Ujian, onComplete: () => 
         snapshotTimer = setInterval(takeSnapshot, 200);
       } catch (err) {
         console.error("Camera access denied or error:", err);
+        setCameraGranted(false);
       }
     };
     startCamera();
@@ -209,6 +212,31 @@ export function ExamRoom({ exam, onComplete }: { exam: Ujian, onComplete: () => 
       setSubmitting(false);
     }
   };
+
+  if (cameraGranted === false) {
+    return (
+      <div className="fixed inset-0 z-[100] bg-slate-50 flex flex-col justify-center items-center p-6 text-center">
+        <AlertTriangle className="w-16 h-16 text-red-500 mb-6" />
+        <h1 className="text-3xl font-extrabold text-slate-900 mb-4 tracking-tight">Akses Kamera Ditolak</h1>
+        <p className="text-slate-600 mb-8 max-w-md text-base sm:text-lg leading-relaxed font-medium">
+          Anda wajib mengizinkan akses kamera untuk mengikuti ujian. Silakan izinkan dari pengaturan browser atau perangkat Anda, lalu muat ulang halaman ini.
+        </p>
+        <button onClick={() => window.location.reload()} className="bg-violet-600 hover:bg-violet-700 text-white px-8 py-4 rounded-xl font-bold transition-all shadow-[0_0_20px_rgba(139,92,246,0.3)] active:scale-95 text-base sm:text-lg">
+          Saya Telah Mengizinkan Kamera
+        </button>
+      </div>
+    );
+  }
+
+  if (cameraGranted === null) {
+    return (
+      <div className="fixed inset-0 z-[100] bg-slate-50 flex flex-col justify-center items-center p-6 text-center">
+        <div className="w-16 h-16 border-4 border-slate-200 border-t-violet-600 rounded-full animate-spin mb-6 shadow-sm" />
+        <p className="text-slate-800 font-bold text-xl sm:text-2xl tracking-tight mb-2">Pengecekan Keamanan...</p>
+        <p className="text-slate-500 font-medium">Sistem sedang meminta akses kamera untuk pengawasan ujian. Mohon berikan izin saat browser memintanya.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-50 flex flex-col lg:flex-row gap-2 lg:gap-4 p-2 lg:p-4 overflow-hidden">
