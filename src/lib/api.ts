@@ -413,11 +413,12 @@ class FirestoreAPI {
           if (progData.force_submit) {
             return { success: true, force_submit: true };
           }
-          const updates: any = { last_snapshot: Date.now() };
+          const updates: any = {};
           if (payload.terjawab !== undefined) updates.terjawab = payload.terjawab;
-          if (payload.snapshot) updates.kamera_snapshot = payload.snapshot;
           
-          await updateDoc(doc(db, 'progres', progDoc.id), updates);
+          if (Object.keys(updates).length > 0) {
+            await updateDoc(doc(db, 'progres', progDoc.id), updates);
+          }
         }
         return { success: true, force_submit: false };
 

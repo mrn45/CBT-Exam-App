@@ -23,11 +23,9 @@ export function ExamRoom({ exam, onComplete }: { exam: Ujian, onComplete: () => 
   const [timeLeft, setTimeLeft] = useState(exam.durasi * 60);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const answersRef = useRef<Record<string, string>>({});
-  const videoRef = useRef<HTMLVideoElement>(null);
   const [submitting, setSubmitting] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const violationCountRef = useRef(0);
-  const [cameraGranted, setCameraGranted] = useState<boolean | null>(null);
 
   const [unansweredList, setUnansweredList] = useState<number[]>([]);
 
@@ -94,58 +92,7 @@ export function ExamRoom({ exam, onComplete }: { exam: Ujian, onComplete: () => 
   }, []);
 
   useEffect(() => {
-    // Camera Setup & Unified Sync
-    let stream: MediaStream | null = null;
-    let syncTimer: any = null;
-    
-    const startCameraAndSync = async () => {
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
-        setCameraGranted(true);
-
-        const syncData = async () => {
-          if (user?.id_siswa && exam?.id) {
-            let base64Img = '';
-            if (videoRef.current && videoRef.current.readyState === 4) {
-              const canvas = document.createElement('canvas');
-              canvas.width = 160;
-              canvas.height = 120;
-              const ctx = canvas.getContext('2d');
-              if (ctx) {
-                ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
-                base64Img = canvas.toDataURL('image/jpeg', 0.4);
-              }
-            }
-            
-            try {
-              const res = await api.call('sync_progres', {
-                 id_ujian: exam.id,
-                 id_siswa: user.id_siswa,
-                 snapshot: base64Img,
-                 terjawab: Object.keys(answersRef.current).filter(k => answersRef.current[k] && answersRef.current[k].trim() !== '').length
-              });
-              if (res.force_submit) {
-                forceSubmit('Ujian dihentikan paksa oleh Admin/Pengawas.');
-              }
-            } catch (err) {
-              console.error("Gagal sync progres:", err);
-            }
-          }
-        };
-
-        // First sync quickly, then every 60 seconds to save quota
-        setTimeout(syncData, 1500);
-        syncTimer = setInterval(syncData, 60000);
-      } catch (err) {
-        console.error("Camera access denied or error:", err);
-        setCameraGranted(false);
-      }
-    };
-    startCameraAndSync();
-
+    // Focus Mode Setup (No Camera)
     const handleViolation = (message: string) => {
       violationCountRef.current += 1;
       if (violationCountRef.current > 3) {
@@ -176,13 +123,6 @@ export function ExamRoom({ exam, onComplete }: { exam: Ujian, onComplete: () => 
     return () => {
       window.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('blur', handleBlur);
-      // Stop camera stream
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-      }
-      if (syncTimer) {
-        clearInterval(syncTimer);
-      }
     };
   }, []);
 
@@ -236,30 +176,7 @@ export function ExamRoom({ exam, onComplete }: { exam: Ujian, onComplete: () => 
     }
   };
 
-  if (cameraGranted === false) {
-    return (
-      <div className="fixed inset-0 z-[100] bg-slate-50 flex flex-col justify-center items-center p-6 text-center">
-        <AlertTriangle className="w-16 h-16 text-red-500 mb-6" />
-        <h1 className="text-3xl font-extrabold text-slate-900 mb-4 tracking-tight">Akses Kamera Ditolak</h1>
-        <p className="text-slate-600 mb-8 max-w-md text-base sm:text-lg leading-relaxed font-medium">
-          Anda wajib mengizinkan akses kamera untuk mengikuti ujian. Silakan izinkan dari pengaturan browser atau perangkat Anda, lalu muat ulang halaman ini.
-        </p>
-        <button onClick={() => window.location.reload()} className="bg-violet-600 hover:bg-violet-700 text-white px-8 py-4 rounded-xl font-bold transition-all shadow-[0_0_20px_rgba(139,92,246,0.3)] active:scale-95 text-base sm:text-lg">
-          Saya Telah Mengizinkan Kamera
-        </button>
-      </div>
-    );
-  }
 
-  if (cameraGranted === null) {
-    return (
-      <div className="fixed inset-0 z-[100] bg-slate-50 flex flex-col justify-center items-center p-6 text-center">
-        <div className="w-16 h-16 border-4 border-slate-200 border-t-violet-600 rounded-full animate-spin mb-6 shadow-sm" />
-        <p className="text-slate-800 font-bold text-xl sm:text-2xl tracking-tight mb-2">Pengecekan Keamanan...</p>
-        <p className="text-slate-500 font-medium">Sistem sedang meminta akses kamera untuk pengawasan ujian. Mohon berikan izin saat browser memintanya.</p>
-      </div>
-    );
-  }
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-50 flex flex-col lg:flex-row gap-2 lg:gap-4 p-2 lg:p-4 overflow-hidden">
@@ -408,28 +325,8 @@ export function ExamRoom({ exam, onComplete }: { exam: Ujian, onComplete: () => 
         </div>
       )}
 
-      {/* Hidden Camera Element for Snapshot */}
-      <div className="fixed top-0 left-0 w-[1px] h-[1px] overflow-hidden opacity-10 pointer-events-none z-[-50]">
-        <video 
-          ref={videoRef}
-          className="w-10 h-10 object-cover"
-          autoPlay 
-          playsInline 
-          muted 
-        />
-      </div>
 
-      {/* Live Monitoring Indicator */}
-      <div className="fixed bottom-4 left-4 z-[40] bg-white border border-slate-200 shadow-lg rounded-2xl p-3 flex items-center gap-3 pointer-events-none fade-in">
-        <div className="relative flex h-3 w-3 sm:h-4 sm:w-4 shrink-0">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-          <span className="relative inline-flex rounded-full h-3 w-3 sm:h-4 sm:w-4 bg-red-500 shrink-0"></span>
-        </div>
-        <div>
-          <p className="text-xs sm:text-sm font-bold text-slate-900 leading-tight">LIVE UJIAN</p>
-          <p className="text-[10px] sm:text-[11px] font-semibold text-slate-500">Monitoring Aktif</p>
-        </div>
-      </div>
+
 
     </div>
   );
