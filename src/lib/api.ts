@@ -293,15 +293,42 @@ class FirestoreAPI {
       }
       
       case 'get_dashboard_stats':
-        const [guru, siswa, mapel, kelas, ujian, nilai, progres] = await Promise.all([
-          this.getCol('guru'), this.getCol('siswa'), this.getCol('mapel'), this.getCol('kelas'), this.getCol('ujian'), this.getCol('nilai'), this.getCol('progres')
+        const [guru, siswa, mapel, kelas, ujian, nilai, progres, logs] = await Promise.all([
+          this.getCol('guru'), this.getCol('siswa'), this.getCol('mapel'), this.getCol('kelas'), this.getCol('ujian'), this.getCol('nilai'), this.getCol('progres'), this.getCol('log_aktivitas')
         ]);
+
+        const activeUjian = ujian.filter((u: any) => u.status === 'Aktif');
+        const activeUjianIds = activeUjian.map((u: any) => String(u.id));
+
+        const targetedSiswa = siswa.filter((s: any) => 
+           activeUjian.some((u: any) => String(u.id_kelas) === 'ALL' || String(u.id_kelas) === String(s.id_kelas))
+        );
+        const targetedSiswaIds = new Set(targetedSiswa.map((s: any) => String(s.id)));
+
+        const activeProgres = progres.filter((p: any) => p.status === 'Sedang Mengerjakan' && activeUjianIds.includes(String(p.id_ujian)));
+        const mengerjakanIds = [...new Set(activeProgres.map((p: any) => String(p.id_siswa)))].filter(id => targetedSiswaIds.has(id));
+
+        const activeNilai = nilai.filter((n: any) => activeUjianIds.includes(String(n.id_ujian)));
+        const selesaiIds = [...new Set(activeNilai.map((n: any) => String(n.id_siswa)))].filter(id => targetedSiswaIds.has(id) && !mengerjakanIds.includes(id));
+
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        const todayLogs = logs.filter((l: any) => l.aktivitas === 'Login ke dalam sistem' && l.timestamp >= todayStart.getTime() && l.role === 'Siswa');
+        const loggedInIds = new Set(todayLogs.map((l: any) => String(l.id_user)));
+        
+        const telahLoginIds = new Set([...loggedInIds, ...mengerjakanIds, ...selesaiIds]);
+        const telahLoginCount = [...targetedSiswaIds].filter(id => telahLoginIds.has(id)).length;
+        const belumLoginCount = targetedSiswa.length - telahLoginCount;
+
         return { 
           success: true, 
           data: {
             guru: guru.length, siswa: siswa.length, mapel: mapel.length, kelas: kelas.length,
-            ujian: ujian.length, siswa_login: 0, siswa_belum_login: siswa.length,
-            siswa_selesai: nilai.length, siswa_mengerjakan: progres.filter((p:any) => p.status === 'Sedang Mengerjakan').length
+            ujian: ujian.length, 
+            siswa_login: telahLoginCount, 
+            siswa_belum_login: belumLoginCount,
+            siswa_selesai: selesaiIds.length, 
+            siswa_mengerjakan: mengerjakanIds.length
           } as DashboardStats
         };
 

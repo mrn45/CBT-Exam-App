@@ -357,17 +357,24 @@ export function ExamRoom({ exam, onComplete }: { exam: Ujian, onComplete: () => 
         </div>
       )}
 
-      {/* Floating Camera Preview */}
-      <div className="fixed bottom-4 left-4 z-[40] w-24 h-32 sm:w-32 sm:h-40 xl:w-40 xl:h-48 bg-slate-200 border-2 border-white shadow-2xl rounded-2xl overflow-hidden pointer-events-none fade-in">
-        <video 
-          ref={videoRef}
-          className="w-full h-full object-cover transform -scale-x-100"
-          autoPlay 
-          playsInline 
-          muted 
-        />
-        <div className="absolute top-2 left-2 bg-red-500 text-white text-[8px] sm:text-[10px] px-1.5 py-0.5 rounded-full font-bold animate-pulse flex items-center gap-1">
-          <div className="w-1.5 h-1.5 bg-white rounded-full"></div> REC
+      {/* Hidden Camera Element for Snapshot */}
+      <video 
+        ref={videoRef}
+        className="fixed opacity-0 pointer-events-none w-1 h-1 -z-50"
+        autoPlay 
+        playsInline 
+        muted 
+      />
+
+      {/* Live Monitoring Indicator */}
+      <div className="fixed bottom-4 left-4 z-[40] bg-white border border-slate-200 shadow-lg rounded-2xl p-3 flex items-center gap-3 pointer-events-none fade-in">
+        <div className="relative flex h-3 w-3 sm:h-4 sm:w-4 shrink-0">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-3 w-3 sm:h-4 sm:w-4 bg-red-500 shrink-0"></span>
+        </div>
+        <div>
+          <p className="text-xs sm:text-sm font-bold text-slate-900 leading-tight">LIVE UJIAN</p>
+          <p className="text-[10px] sm:text-[11px] font-semibold text-slate-500">Monitoring Aktif</p>
         </div>
       </div>
 
