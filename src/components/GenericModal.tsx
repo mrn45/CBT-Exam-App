@@ -329,7 +329,7 @@ export function GenericModal({ isOpen, onClose, schema, initialData, colName }: 
 
                 if (c === 'nilai_kkm' || c === 'min_kumpul' || c === 'durasi_menit' || c === 'jml_soal' || c === 'jml_essay') {
                   const labelMap: Record<string, string> = {
-                     nilai_kkm: 'Nilai KKM',
+                     nilai_kkm: 'Nilai KKTP',
                      min_kumpul: 'Minimal Waktu Pengumpulan (Menit)',
                      durasi_menit: 'Durasi (Menit)',
                      jml_soal: 'Jumlah Soal Pilihan Ganda',

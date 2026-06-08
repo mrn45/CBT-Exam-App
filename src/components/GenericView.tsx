@@ -259,6 +259,9 @@ export function GenericView({ menu }: { menu: string }) {
              }
          }
          toast('Semua peserta berhasil direset', 'success');
+      } else if (deleteTarget.type === 'selesai_paksa') {
+         await api.call('force_submit_peserta', { id_ujian: deleteTarget.id_ujian, id_siswa: deleteTarget.id_siswa });
+         toast('Ujian siswa berhasil dihentikan paksa', 'success');
       } else if (menu === 'monitor') {
          await deleteDoc(doc(db, 'progres', deleteTarget.id));
          const qs = await getDocs(query(collection(db, 'nilai'), where('id_siswa', '==', deleteTarget.id_siswa), where('id_ujian', '==', deleteTarget.id_ujian)));
@@ -467,15 +470,15 @@ export function GenericView({ menu }: { menu: string }) {
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="bg-white border border-slate-200 rounded-3xl p-6 w-full max-w-sm shadow-2xl relative text-center">
             <h3 className="text-xl font-bold text-slate-900 mb-2">
-              {deleteTarget.type === 'kosongkan_data' ? 'Konfirmasi Kosongkan Data' : (deleteTarget.type === 'reset_semua' ? 'Konfirmasi Reset Semua' : (menu === 'monitor' ? 'Konfirmasi Reset' : 'Konfirmasi Hapus'))}
+              {deleteTarget.type === 'kosongkan_data' ? 'Konfirmasi Kosongkan Data' : (deleteTarget.type === 'reset_semua' ? 'Konfirmasi Reset Semua' : (deleteTarget.type === 'selesai_paksa' ? 'Selesai Paksa' : (menu === 'monitor' ? 'Konfirmasi Reset' : 'Konfirmasi Hapus')))}
             </h3>
             <p className="text-sm text-slate-500 mb-6">
-              {deleteTarget.type === 'kosongkan_data' ? 'Yakin ingin mengosongkan seluruh data pada tabel ini? Aksi ini tidak dapat dikembalikan.' : (deleteTarget.type === 'reset_semua' ? 'Yakin ingin mereset seluruh ujian siswa di tabel ini? Aksi ini tidak dapat dikembalikan.' : (menu === 'monitor' ? 'Yakin ingin mereset ujian siswa ini dari awal?' : 'Yakin ingin menghapus data ini?'))}
+              {deleteTarget.type === 'kosongkan_data' ? 'Yakin ingin mengosongkan seluruh data pada tabel ini? Aksi ini tidak dapat dikembalikan.' : (deleteTarget.type === 'reset_semua' ? 'Yakin ingin mereset seluruh ujian siswa di tabel ini? Aksi ini tidak dapat dikembalikan.' : (deleteTarget.type === 'selesai_paksa' ? 'Yakin ingin menyelesaikan ujian peserta ini secara paksa?' : (menu === 'monitor' ? 'Yakin ingin mereset ujian siswa ini dari awal?' : 'Yakin ingin menghapus data ini?')))}
             </p>
             <div className="flex gap-3">
               <button onClick={() => setDeleteTarget(null)} className="flex-1 bg-slate-100 py-3 rounded-full hover:bg-slate-200 font-semibold text-slate-700 btn-touch">Batal</button>
               <button onClick={confirmDelete} className={`flex-1 ${deleteTarget.type === 'reset_semua' ? 'bg-orange-600 hover:bg-orange-700' : 'bg-red-600 hover:bg-red-700'} py-3 rounded-full text-white font-semibold btn-touch shadow-lg`}>
-                {deleteTarget.type === 'kosongkan_data' ? 'Kosongkan' : (deleteTarget.type === 'reset_semua' ? 'Reset Semua' : (menu === 'monitor' ? 'Reset' : 'Hapus'))}
+                {deleteTarget.type === 'kosongkan_data' ? 'Kosongkan' : (deleteTarget.type === 'reset_semua' ? 'Reset Semua' : (deleteTarget.type === 'selesai_paksa' ? 'Selesai Paksa' : (menu === 'monitor' ? 'Reset' : 'Hapus')))}
               </button>
             </div>
           </div>
@@ -597,7 +600,7 @@ export function GenericView({ menu }: { menu: string }) {
                 <tr>
                   {schema.map(c => (
                     <th key={c} className="px-6 py-4 font-semibold uppercase text-xs tracking-wider text-slate-500">
-                      {c === 'nilai_katrol' ? 'NILAI AKHIR' : c.replace(/_/g, ' ')}
+                      {c === 'nilai_katrol' ? 'NILAI AKHIR' : c === 'nilai_kkm' ? 'NILAI KKTP' : c.replace(/_/g, ' ')}
                     </th>
                   ))}
                   {menu !== 'log_aktivitas' && (
@@ -717,7 +720,7 @@ export function GenericView({ menu }: { menu: string }) {
                                   const hasScore = row[c] !== undefined && row[c] !== null && row[c] !== '';
                                   return (
                                     <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${!hasScore ? 'bg-slate-100 text-slate-500' : isPass ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
-                                      KKM: {ujk.nilai_kkm} {hasScore ? (isPass ? '(Lulus)' : '(Remedial)') : ''}
+                                      KKTP: {ujk.nilai_kkm} {hasScore ? (isPass ? '(Lulus)' : '(Remedial)') : ''}
                                     </span>
                                   );
                                }
@@ -750,7 +753,12 @@ export function GenericView({ menu }: { menu: string }) {
                         )}
                         
                         {menu === 'monitor' ? (
-                          <button onClick={() => handleDelete(row)} className="text-orange-500 bg-orange-50 hover:bg-orange-100 px-3 py-1.5 rounded-lg text-xs font-semibold btn-touch transition-colors">Reset Peserta</button>
+                          <div className="flex gap-2 justify-end">
+                            {row.status === 'Sedang Mengerjakan' && (
+                              <button onClick={() => setDeleteTarget({ type: 'selesai_paksa', id_ujian: row.id_ujian, id_siswa: row.id_siswa })} className="text-red-600 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg text-xs font-semibold btn-touch transition-colors">Selesai Paksa</button>
+                            )}
+                            <button onClick={() => handleDelete(row)} className="text-orange-500 bg-orange-50 hover:bg-orange-100 px-3 py-1.5 rounded-lg text-xs font-semibold btn-touch transition-colors">Reset Peserta</button>
+                          </div>
                         ) : (
                           <button onClick={() => handleDelete(row)} className="text-red-500 hover:text-red-400 text-xs font-medium btn-touch">Hapus</button>
                         )}

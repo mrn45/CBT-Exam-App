@@ -388,9 +388,20 @@ class FirestoreAPI {
         }
         return { success: true };
 
+      case 'force_submit_peserta':
+        const fsQ = await getDocs(query(collection(db, 'progres'), where('id_ujian', '==', payload.id_ujian), where('id_siswa', '==', payload.id_siswa)));
+        if (!fsQ.empty) {
+          await updateDoc(doc(db, 'progres', fsQ.docs[0].id), { force_submit: true });
+        }
+        return { success: true };
+
       case 'update_camera_snapshot':
         const snapQ = await getDocs(query(collection(db, 'progres'), where('id_ujian', '==', payload.id_ujian), where('id_siswa', '==', payload.id_siswa)));
         if (!snapQ.empty) {
+          const progData = snapQ.docs[0].data();
+          if (progData.force_submit) {
+            return { success: true, force_submit: true };
+          }
           await updateDoc(doc(db, 'progres', snapQ.docs[0].id), { kamera_snapshot: payload.snapshot, last_snapshot: Date.now() });
         }
         return { success: true };

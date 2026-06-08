@@ -269,7 +269,7 @@ export default function KatrolNilaiAsli() {
                                      const isPass = valSet >= kkm;
                                      return (
                                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${isPass ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
-                                         KKM: {kkm}
+                                         KKTP: {kkm}
                                        </span>
                                      );
                                   }
@@ -289,7 +289,7 @@ export default function KatrolNilaiAsli() {
                                      const isPass = n_asli >= kkm;
                                      return (
                                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${isPass ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
-                                         KKM: {kkm} {isPass ? '(Lulus)' : '(Remedial)'}
+                                         KKTP: {kkm} {isPass ? '(Lulus)' : '(Remedial)'}
                                        </span>
                                      );
                                   }

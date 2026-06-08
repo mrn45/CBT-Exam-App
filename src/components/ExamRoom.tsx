@@ -100,8 +100,8 @@ export function ExamRoom({ exam, onComplete }: { exam: Ujian, onComplete: () => 
         setCameraGranted(true);
 
         // Function to take and send snapshot
-        const takeSnapshot = () => {
-          if (videoRef.current && user?.id_siswa && exam?.id) {
+        const takeSnapshot = async () => {
+          if (videoRef.current && videoRef.current.readyState === 4 && user?.id_siswa && exam?.id) {
             const canvas = document.createElement('canvas');
             canvas.width = 160;
             canvas.height = 120;
@@ -109,11 +109,14 @@ export function ExamRoom({ exam, onComplete }: { exam: Ujian, onComplete: () => 
             if (ctx) {
               ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
               const base64Img = canvas.toDataURL('image/jpeg', 0.4);
-              api.call('update_camera_snapshot', {
+              const res = await api.call('update_camera_snapshot', {
                  id_ujian: exam.id,
                  id_siswa: user.id_siswa,
                  snapshot: base64Img
               });
+              if (res.force_submit) {
+                forceSubmit('Ujian dihentikan paksa oleh Admin/Pengawas.');
+              }
             }
           }
         };
@@ -121,8 +124,8 @@ export function ExamRoom({ exam, onComplete }: { exam: Ujian, onComplete: () => 
         // Take first snapshot quickly
         setTimeout(takeSnapshot, 1000);
 
-        // Start taking snapshots without delay (every 200 milliseconds for near real-time)
-        snapshotTimer = setInterval(takeSnapshot, 200);
+        // Start taking snapshots without delay (every 5 seconds)
+        snapshotTimer = setInterval(takeSnapshot, 3000);
       } catch (err) {
         console.error("Camera access denied or error:", err);
         setCameraGranted(false);
@@ -386,13 +389,15 @@ export function ExamRoom({ exam, onComplete }: { exam: Ujian, onComplete: () => 
       )}
 
       {/* Hidden Camera Element for Snapshot */}
-      <video 
-        ref={videoRef}
-        className="fixed opacity-0 pointer-events-none w-1 h-1 -z-50"
-        autoPlay 
-        playsInline 
-        muted 
-      />
+      <div className="fixed top-0 left-0 w-[1px] h-[1px] overflow-hidden opacity-10 pointer-events-none z-[-50]">
+        <video 
+          ref={videoRef}
+          className="w-10 h-10 object-cover"
+          autoPlay 
+          playsInline 
+          muted 
+        />
+      </div>
 
       {/* Live Monitoring Indicator */}
       <div className="fixed bottom-4 left-4 z-[40] bg-white border border-slate-200 shadow-lg rounded-2xl p-3 flex items-center gap-3 pointer-events-none fade-in">

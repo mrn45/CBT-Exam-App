@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { Camera, AlertCircle, RefreshCw } from 'lucide-react';
+import { Camera, AlertCircle, RefreshCw, LogOut } from 'lucide-react';
 import { useApp } from '../lib/context';
+import { api } from '../lib/api';
+import { toast } from './ui/Toast';
 
 export default function CameraMonitor() {
   const { user } = useApp();
@@ -53,7 +55,18 @@ export default function CameraMonitor() {
   }, [selectedUjian]);
 
   const filteredProgres = progresList.filter((p: any) => p.status === 'Sedang Mengerjakan' && p.kamera_snapshot);
-  const offlineStudents = filteredProgres.filter(p => Date.now() - (p.last_snapshot || 0) > 5000);
+  const offlineStudents = filteredProgres.filter(p => Date.now() - (p.last_snapshot || 0) > 10000);
+
+  const handleForceSubmit = async (p: any, sInfo: any) => {
+    if (confirm(`Yakin ingin menghentikan ujian ${sInfo.nama} secara paksa?`)) {
+      try {
+        await api.call('force_submit_peserta', { id_ujian: selectedUjian, id_siswa: p.id_siswa });
+        toast(`Ujian ${sInfo.nama} berhasil dihentikan paksa`, 'success');
+      } catch (err: any) {
+        toast(`Gagal: ${err.message}`, 'error');
+      }
+    }
+  };
 
   return (
     <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-slate-100 overflow-hidden w-full max-w-7xl">
@@ -120,7 +133,7 @@ export default function CameraMonitor() {
            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
              {filteredProgres.map((p: any) => {
                const sInfo = siswaList.find(s => s.id === p.id_siswa) || { nama: p.id_siswa, username: 'Unknown' };
-               const isActive = Date.now() - (p.last_snapshot || 0) < 5000; // less than 5 seconds ago
+               const isActive = Date.now() - (p.last_snapshot || 0) < 10000; // less than 10 seconds ago
                return (
                  <div key={p.id} className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                     <div className="relative aspect-video bg-slate-900 group">
@@ -148,7 +161,10 @@ export default function CameraMonitor() {
                     </div>
                     <div className="p-3 text-center">
                        <p className="font-bold text-slate-800 text-sm truncate" title={sInfo.nama}>{sInfo.nama}</p>
-                       <p className="text-[10px] text-slate-500 font-semibold">{sInfo.username}</p>
+                       <p className="text-[10px] text-slate-500 font-semibold mb-2">{sInfo.username}</p>
+                       <button onClick={() => handleForceSubmit(p, sInfo)} className="bg-red-50 hover:bg-red-100 text-red-600 w-full py-1.5 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1.5">
+                         <LogOut className="w-3.5 h-3.5" /> Selesai Paksa
+                       </button>
                     </div>
                  </div>
                )
