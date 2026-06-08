@@ -299,11 +299,10 @@ export function GenericModal({ isOpen, onClose, schema, initialData, colName }: 
                 if (c === 'file_pdf') {
                   return (
                     <div key={c}>
-                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">URL File PDF Ujian</label>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">URL File PDF Ujian / ID GDrive</label>
                       <input 
-                        type="url"
-                        placeholder="https://example.com/soal.pdf"
-                        required
+                        type="text"
+                        placeholder="https://example.com/soal.pdf atau ID File"
                         value={formData[c] || ''} 
                         onChange={e => setFormData({...formData, [c]: e.target.value})} 
                         className="w-full bg-slate-50 border border-slate-200 p-3.5 rounded-xl text-slate-900 outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-500/10 smooth-transition" 
@@ -313,13 +312,21 @@ export function GenericModal({ isOpen, onClose, schema, initialData, colName }: 
                 }
 
                 if (c === 'waktu_mulai') {
+                  const formatDateTimeLocal = (dateStr: string) => {
+                    if (!dateStr) return '';
+                    if (dateStr.includes('Z')) {
+                      // Attempt to format to local if it has Z, but keeping it simple: just take first 16 chars if it's full ISO
+                      return dateStr.substring(0, 16);
+                    }
+                    return dateStr.length > 16 ? dateStr.substring(0, 16) : dateStr;
+                  };
                   return (
                     <div key={c}>
                       <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Waktu Mulai Ujian</label>
                       <input 
                         type="datetime-local"
                         required
-                        value={formData[c] || ''} 
+                        value={formatDateTimeLocal(formData[c])} 
                         onChange={e => setFormData({...formData, [c]: e.target.value})} 
                         className="w-full bg-slate-50 border border-slate-200 p-3.5 rounded-xl text-slate-900 outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-500/10 smooth-transition" 
                       />
