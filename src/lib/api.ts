@@ -405,16 +405,22 @@ class FirestoreAPI {
         }
         return { success: true, force_submit: false };
 
-      case 'update_camera_snapshot':
-        const snapQ = await getDocs(query(collection(db, 'progres'), where('id_ujian', '==', payload.id_ujian), where('id_siswa', '==', payload.id_siswa)));
-        if (!snapQ.empty) {
-          const progData = snapQ.docs[0].data();
+      case 'sync_progres':
+        const cq = await getDocs(query(collection(db, 'progres'), where('id_ujian', '==', payload.id_ujian), where('id_siswa', '==', payload.id_siswa)));
+        if (!cq.empty) {
+          const progDoc = cq.docs[0];
+          const progData = progDoc.data();
           if (progData.force_submit) {
             return { success: true, force_submit: true };
           }
-          await updateDoc(doc(db, 'progres', snapQ.docs[0].id), { kamera_snapshot: payload.snapshot, last_snapshot: Date.now() });
+          const updates: any = { last_snapshot: Date.now() };
+          if (payload.terjawab !== undefined) updates.terjawab = payload.terjawab;
+          if (payload.snapshot) updates.kamera_snapshot = payload.snapshot;
+          
+          await updateDoc(doc(db, 'progres', progDoc.id), updates);
         }
-        return { success: true };
+        return { success: true, force_submit: false };
+
       case 'submit_ujian':
         const ujianDoc = await getDoc(doc(db, 'ujian', payload.id_ujian));
         let kunciJawaban: Record<string, string> = {};
@@ -475,7 +481,11 @@ class FirestoreAPI {
       }
     } catch (error: any) {
       console.error("Firestore call failed:", error);
-      return { success: false, message: error.message || 'Database error occurred' };
+      let msg = error.message || 'Database error occurred';
+      if (error.code === 'resource-exhausted' || msg.includes('Quota limit exceeded')) {
+         msg = "Error: Quota server harian telah habis. Silakan coba kembali besok atau hubungi administrator.";
+      }
+      return { success: false, message: msg };
     }
   }
 }

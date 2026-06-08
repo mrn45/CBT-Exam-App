@@ -55,12 +55,13 @@ export default function CameraMonitor() {
   }, [selectedUjian]);
 
   const filteredProgres = progresList.filter((p: any) => p.status === 'Sedang Mengerjakan' && p.kamera_snapshot);
-  const offlineStudents = filteredProgres.filter(p => Date.now() - (p.last_snapshot || 0) > 10000);
+  const offlineStudents = filteredProgres.filter(p => Date.now() - (p.last_snapshot || 0) > 75000);
 
   const handleForceSubmit = async (p: any, sInfo: any) => {
     if (confirm(`Yakin ingin menghentikan ujian ${sInfo.nama} secara paksa?`)) {
       try {
-        await api.call('force_submit_peserta', { id_ujian: selectedUjian, id_siswa: p.id_siswa });
+        const res = await api.call('force_submit_peserta', { id_ujian: selectedUjian, id_siswa: p.id_siswa });
+        if (!res.success) throw new Error(res.message);
         toast(`Ujian ${sInfo.nama} berhasil dihentikan paksa`, 'success');
       } catch (err: any) {
         toast(`Gagal: ${err.message}`, 'error');
@@ -133,7 +134,7 @@ export default function CameraMonitor() {
            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
              {filteredProgres.map((p: any) => {
                const sInfo = siswaList.find(s => s.id === p.id_siswa) || { nama: p.id_siswa, username: 'Unknown' };
-               const isActive = Date.now() - (p.last_snapshot || 0) < 10000; // less than 10 seconds ago
+               const isActive = Date.now() - (p.last_snapshot || 0) < 75000; // less than 75 seconds ago
                return (
                  <div key={p.id} className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                     <div className="relative aspect-video bg-slate-900 group">

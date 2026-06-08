@@ -5,6 +5,7 @@ import { api } from '../lib/api';
 import { formatTime } from '../lib/utils';
 import { toast } from './ui/Toast';
 import { FileText, Send, AlertTriangle } from 'lucide-react';
+import localforage from 'localforage';
 
 const getEmbedUrl = (url: string) => {
   if (!url) return '';
@@ -37,14 +38,20 @@ export function ExamRoom({ exam, onComplete }: { exam: Ujian, onComplete: () => 
 
   const forceSubmit = async (reason: string = 'Waktu habis, jawaban terkirim otomatis!') => {
     setSubmitting(true);
-    await api.call('submit_ujian', {
+    const res = await api.call('submit_ujian', {
       id_ujian: exam.id,
       id_siswa: user?.id_siswa,
       jawaban: answersRef.current,
       jml_essay: exam.jml_essay
     });
-    toast(reason, 'info');
-    onComplete();
+    if (res.success) {
+      localforage.removeItem(`exam_${exam.id}_${user?.id_siswa}`);
+      toast(reason, 'info');
+      onComplete();
+    } else {
+      toast('Gagal mengumpulkan: ' + res.message, 'error');
+      setSubmitting(false);
+    }
   };
 
   // Derive questions based strictly on exam structure info for this lightweight replica
@@ -62,6 +69,16 @@ export function ExamRoom({ exam, onComplete }: { exam: Ujian, onComplete: () => 
   const answeredCount = Object.keys(answers).filter(k => answers[k] && answers[k].trim() !== '').length;
   const progressPercent = Math.round((answeredCount / totalQuestions) * 100) || 0;
 
+  // Load cached answers
+  useEffect(() => {
+    if (exam?.id && user?.id_siswa) {
+      const key = `exam_${exam.id}_${user.id_siswa}`;
+      localforage.getItem<Record<string, string>>(key).then(val => {
+        if (val) setAnswers(val);
+      }).catch(err => console.warn('Failed loading local cache:', err));
+    }
+  }, [exam?.id, user?.id_siswa]);
+
   useEffect(() => {
     const timer = setInterval(() => {
       setTimeLeft(prev => {
@@ -77,40 +94,11 @@ export function ExamRoom({ exam, onComplete }: { exam: Ujian, onComplete: () => 
   }, []);
 
   useEffect(() => {
-    if (user?.id_siswa) {
-      api.call('update_terjawab', {
-        id_ujian: exam.id,
-        id_siswa: user.id_siswa,
-        terjawab: answeredCount
-      });
-    }
-  }, [answeredCount, exam.id, user?.id_siswa]);
-
-  useEffect(() => {
-    const statusTimer = setInterval(async () => {
-      if (exam?.id && user?.id_siswa) {
-        try {
-          const res = await api.call('check_progres_status', {
-            id_ujian: exam.id,
-            id_siswa: user.id_siswa
-          });
-          if (res.force_submit) {
-            forceSubmit('Ujian dihentikan paksa oleh Admin/Pengawas.');
-          }
-        } catch (e) {
-          console.error(e);
-        }
-      }
-    }, 5000);
-    return () => clearInterval(statusTimer);
-  }, [exam?.id, user?.id_siswa]);
-
-  useEffect(() => {
-    // Camera Setup
+    // Camera Setup & Unified Sync
     let stream: MediaStream | null = null;
-    let snapshotTimer: any = null;
+    let syncTimer: any = null;
     
-    const startCamera = async () => {
+    const startCameraAndSync = async () => {
       try {
         stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
         if (videoRef.current) {
@@ -118,39 +106,45 @@ export function ExamRoom({ exam, onComplete }: { exam: Ujian, onComplete: () => 
         }
         setCameraGranted(true);
 
-        // Function to take and send snapshot
-        const takeSnapshot = async () => {
-          if (videoRef.current && videoRef.current.readyState === 4 && user?.id_siswa && exam?.id) {
-            const canvas = document.createElement('canvas');
-            canvas.width = 160;
-            canvas.height = 120;
-            const ctx = canvas.getContext('2d');
-            if (ctx) {
-              ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
-              const base64Img = canvas.toDataURL('image/jpeg', 0.4);
-              const res = await api.call('update_camera_snapshot', {
+        const syncData = async () => {
+          if (user?.id_siswa && exam?.id) {
+            let base64Img = '';
+            if (videoRef.current && videoRef.current.readyState === 4) {
+              const canvas = document.createElement('canvas');
+              canvas.width = 160;
+              canvas.height = 120;
+              const ctx = canvas.getContext('2d');
+              if (ctx) {
+                ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+                base64Img = canvas.toDataURL('image/jpeg', 0.4);
+              }
+            }
+            
+            try {
+              const res = await api.call('sync_progres', {
                  id_ujian: exam.id,
                  id_siswa: user.id_siswa,
-                 snapshot: base64Img
+                 snapshot: base64Img,
+                 terjawab: Object.keys(answersRef.current).filter(k => answersRef.current[k] && answersRef.current[k].trim() !== '').length
               });
               if (res.force_submit) {
                 forceSubmit('Ujian dihentikan paksa oleh Admin/Pengawas.');
               }
+            } catch (err) {
+              console.error("Gagal sync progres:", err);
             }
           }
         };
 
-        // Take first snapshot quickly
-        setTimeout(takeSnapshot, 1000);
-
-        // Start taking snapshots without delay (every 5 seconds)
-        snapshotTimer = setInterval(takeSnapshot, 3000);
+        // First sync quickly, then every 60 seconds to save quota
+        setTimeout(syncData, 1500);
+        syncTimer = setInterval(syncData, 60000);
       } catch (err) {
         console.error("Camera access denied or error:", err);
         setCameraGranted(false);
       }
     };
-    startCamera();
+    startCameraAndSync();
 
     const handleViolation = (message: string) => {
       violationCountRef.current += 1;
@@ -186,14 +180,20 @@ export function ExamRoom({ exam, onComplete }: { exam: Ujian, onComplete: () => 
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
       }
-      if (snapshotTimer) {
-        clearInterval(snapshotTimer);
+      if (syncTimer) {
+        clearInterval(syncTimer);
       }
     };
   }, []);
 
   const handleAnswer = (id: string, val: string) => {
-    setAnswers(prev => ({ ...prev, [id]: val }));
+    setAnswers(prev => {
+      const updated = { ...prev, [id]: val };
+      if (exam?.id && user?.id_siswa) {
+        localforage.setItem(`exam_${exam.id}_${user.id_siswa}`, updated).catch(err => console.warn(err));
+      }
+      return updated;
+    });
   };
 
   const handleSubmit = async () => {
@@ -227,10 +227,11 @@ export function ExamRoom({ exam, onComplete }: { exam: Ujian, onComplete: () => 
       jml_essay: exam.jml_essay
     });
     if (res.success) {
+      localforage.removeItem(`exam_${exam.id}_${user?.id_siswa}`);
       toast("Lembar jawaban berhasil dikumpulkan", "success");
       onComplete();
     } else {
-      toast("Gagal mengumpulkan", "error");
+      toast("Gagal mengumpulkan: " + res.message, "error");
       setSubmitting(false);
     }
   };

@@ -260,7 +260,8 @@ export function GenericView({ menu }: { menu: string }) {
          }
          toast('Semua peserta berhasil direset', 'success');
       } else if (deleteTarget.type === 'selesai_paksa') {
-         await api.call('force_submit_peserta', { id_ujian: deleteTarget.id_ujian, id_siswa: deleteTarget.id_siswa });
+         const res = await api.call('force_submit_peserta', { id_ujian: deleteTarget.id_ujian, id_siswa: deleteTarget.id_siswa });
+         if (!res.success) throw new Error(res.message);
          toast('Ujian siswa berhasil dihentikan paksa', 'success');
       } else if (menu === 'monitor') {
          await deleteDoc(doc(db, 'progres', deleteTarget.id));
