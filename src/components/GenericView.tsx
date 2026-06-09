@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
 import { useApp } from '../lib/context';
 import { toast } from './ui/Toast';
-import { Layers, Plus, Search, Filter, Download, Upload } from 'lucide-react';
+import { Layers, Plus, Search, Filter, Download, Upload, RefreshCw } from 'lucide-react';
 import { motion } from 'motion/react';
 import { GenericModal } from './GenericModal';
 import { db } from '../lib/firebase';
@@ -16,6 +16,10 @@ export function GenericView({ menu }: { menu: string }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingData, setEditingData] = useState<any>(null);
   const [inlineValues, setInlineValues] = useState<Record<string, Record<string, string>>>({});
+  const [realTimeRefresh, setRealTimeRefresh] = useState(() => {
+    const saved = localStorage.getItem('realtime_refresh_monitor');
+    return saved === null ? true : saved === 'true';
+  });
   
   const [mapelList, setMapelList] = useState<any[]>([]);
   const [kelasList, setKelasList] = useState<any[]>([]);
@@ -97,13 +101,23 @@ export function GenericView({ menu }: { menu: string }) {
     let unsub: any = null;
     if (endpoint) {
       setLoading(true);
-      api.subscribe(endpoint, {}, (newdata) => {
-         setData(newdata || []);
-         setLoading(false);
-      }).then(u => { unsub = u; }).catch(e => {
-        toast('Gagal memuat data dari database real-time', 'error');
-        setLoading(false);
-      });
+      if (menu === 'monitor' && !realTimeRefresh) {
+        api.call(endpoint, {}).then((r) => {
+          setData(r.data || []);
+          setLoading(false);
+        }).catch(e => {
+          toast('Gagal memuat data dari database', 'error');
+          setLoading(false);
+        });
+      } else {
+        api.subscribe(endpoint, {}, (newdata) => {
+           setData(newdata || []);
+           setLoading(false);
+        }).then(u => { unsub = u; }).catch(e => {
+          toast('Gagal memuat data dari database real-time', 'error');
+          setLoading(false);
+        });
+      }
     } else {
       setLoading(false);
       setData([]);
@@ -112,7 +126,7 @@ export function GenericView({ menu }: { menu: string }) {
     return () => {
       if (typeof unsub === 'function') unsub();
     }
-  }, [menu]);
+  }, [menu, realTimeRefresh]);
 
   const title = menu.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase());
   
@@ -509,6 +523,45 @@ export function GenericView({ menu }: { menu: string }) {
           )}
           {['data_cp', 'input_cp', 'rekap', 'katrol', 'monitor'].includes(menu) && (
             <div className="hidden sm:flex items-center gap-2 mr-2">
+              {menu === 'monitor' && user?.role === 'Admin' && (
+                <div className="flex items-center gap-2 border border-slate-200 rounded-full px-3 py-1 bg-slate-50 h-10">
+                  <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Real-time</span>
+                  <button
+                    onClick={() => {
+                      const next = !realTimeRefresh;
+                      setRealTimeRefresh(next);
+                      localStorage.setItem('realtime_refresh_monitor', String(next));
+                    }}
+                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${realTimeRefresh ? 'bg-violet-600' : 'bg-slate-300'}`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${realTimeRefresh ? 'translate-x-4' : 'translate-x-0'}`}
+                    />
+                  </button>
+                </div>
+              )}
+              {menu === 'monitor' && !realTimeRefresh && (
+                <button
+                  onClick={async () => {
+                    setLoading(true);
+                    try {
+                      const res = await api.call('get_progres', {});
+                      setData(res.data || []);
+                      toast('Data berhasil diperbarui', 'success');
+                    } catch(err) {
+                      toast('Gagal memuat data', 'error');
+                    } finally {
+                      setLoading(false);
+                    }
+                  }}
+                  disabled={loading}
+                  className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 h-10 px-4 rounded-full flex items-center justify-center shrink-0 btn-touch shadow-sm text-xs font-semibold gap-2"
+                  title="Sinkronisasi Data Secara Manual"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-violet-500' : ''}`} />
+                  Refresh
+                </button>
+              )}
               {(menu === 'data_cp' || (menu === 'input_cp' && user?.role !== 'Pengawas') || menu === 'rekap' || menu === 'katrol' || menu === 'monitor') && (
                 <select
                   value={filterMapel}
@@ -783,6 +836,14 @@ export function GenericView({ menu }: { menu: string }) {
         )}
         {menu === 'monitor' && filteredData.length > 0 && !loading && (
           <div className="p-4 border-t border-slate-200 bg-slate-50 flex justify-end items-center px-6 gap-3">
+            {user?.role === 'Admin' && (
+              <button 
+                onClick={() => setDeleteTarget({ type: 'kosongkan_data' })} 
+                className="px-6 py-2.5 bg-red-600 text-white font-semibold rounded-full hover:bg-red-700 btn-touch shadow-[0_4px_15px_rgba(220,38,38,0.3)] text-sm flex items-center gap-2"
+              >
+                Kosongkan Data
+              </button>
+            )}
             <button 
               onClick={() => setDeleteTarget({ type: 'reset_semua' })} 
               className="px-6 py-2.5 bg-orange-600 text-white font-semibold rounded-full hover:bg-orange-700 btn-touch shadow-[0_4px_15px_rgba(234,88,12,0.3)] text-sm flex items-center gap-2"
