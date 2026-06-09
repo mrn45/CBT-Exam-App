@@ -67,6 +67,20 @@ export function ExamRoom({ exam, onComplete }: { exam: Ujian, onComplete: () => 
   const answeredCount = Object.keys(answers).filter(k => answers[k] && answers[k].trim() !== '').length;
   const progressPercent = Math.round((answeredCount / totalQuestions) * 100) || 0;
 
+  // Sync progress to server real-time
+  useEffect(() => {
+    if (exam?.id && user?.id_siswa) {
+      const handler = setTimeout(() => {
+        api.call('sync_progres', {
+          id_ujian: exam.id,
+          id_siswa: user.id_siswa,
+          terjawab: answeredCount
+        }).catch(err => console.warn("Failed to sync progress:", err));
+      }, 500); // 500ms debounce
+      return () => clearTimeout(handler);
+    }
+  }, [answeredCount, exam?.id, user?.id_siswa]);
+
   // Load cached answers
   useEffect(() => {
     if (exam?.id && user?.id_siswa) {

@@ -71,11 +71,21 @@ export function GenericModal({ isOpen, onClose, schema, initialData, colName }: 
     e.preventDefault();
     setIsSaving(true);
     try {
+      const payload = { ...formData };
+      delete payload.id;
+
+      // Force number definitions for numeric schema fields
+      const numericFields = ['durasi_menit', 'min_kumpul', 'jml_soal', 'jml_essay', 'jml_opsi', 'nilai_kkm'];
+      numericFields.forEach(f => {
+        if (payload[f] !== undefined) {
+           payload[f] = payload[f] === '' ? 0 : Number(payload[f]);
+        }
+      });
+
       if (initialData?.id) {
         // Update
         const ref = doc(db, colName, initialData.id);
-        const toSave = { ...formData };
-        delete toSave.id;
+        const toSave = { ...payload };
         if (colName === 'nilai' && toSave.status_koreksi === 'Sudah Dikoreksi') {
            let totalEssayNum = 0;
            let essayCount = 0;
@@ -118,8 +128,8 @@ export function GenericModal({ isOpen, onClose, schema, initialData, colName }: 
              const id = Math.random().toString(36).substr(2, 9);
              const ref = doc(db, colName, id);
              await setDoc(ref, {
-                id_mapel: formData.id_mapel,
-                id_kelas: formData.id_kelas,
+                id_mapel: payload.id_mapel,
+                id_kelas: payload.id_kelas,
                 capaian_pembelajaran: cp.capaian_pembelajaran,
                 deskripsi: cp.deskripsi,
                 id
@@ -128,7 +138,7 @@ export function GenericModal({ isOpen, onClose, schema, initialData, colName }: 
         } else {
           const newId = formData.id?.trim() || Math.random().toString(36).substr(2, 9);
           const ref = doc(db, colName, newId);
-          const toCreate = { ...formData, id: newId };
+          const toCreate = { ...payload, id: newId };
           if (colName === 'guru') {
             toCreate.mengajar = mengajarList.filter(m => m.id_kelas && m.id_mapel);
           }
