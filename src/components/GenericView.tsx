@@ -234,17 +234,22 @@ export function GenericView({ menu }: { menu: string }) {
   const [deleteTarget, setDeleteTarget] = useState<any>(null);
   const [kunciModalUjian, setKunciModalUjian] = useState<any>(null);
   const [tempKunci, setTempKunci] = useState<Record<number, string>>({});
+  const [tempBobot, setTempBobot] = useState<Record<number, number>>({});
 
   const handleEditKunci = (row: any) => {
     setKunciModalUjian(row);
     setTempKunci(row.kunci_jawaban || {});
+    setTempBobot(row.bobot_jawaban || {});
   };
 
   const handleSaveKunci = async () => {
     if (!kunciModalUjian) return;
     try {
       const ref = doc(db, 'ujian', kunciModalUjian.id);
-      await updateDoc(ref, { kunci_jawaban: tempKunci });
+      await updateDoc(ref, { 
+        kunci_jawaban: tempKunci,
+        bobot_jawaban: tempBobot
+      });
       toast('Kunci jawaban berhasil disimpan', 'success');
       setKunciModalUjian(null);
     } catch(err: any) {
@@ -866,25 +871,55 @@ export function GenericView({ menu }: { menu: string }) {
 
       {kunciModalUjian && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-white border border-slate-200 rounded-3xl p-6 w-full max-w-lg shadow-2xl relative flex flex-col max-h-[90vh]">
-            <h3 className="text-xl font-bold text-slate-900 mb-2">Set Kunci Jawaban</h3>
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 w-full max-w-2xl shadow-2xl relative flex flex-col max-h-[90vh]">
+            <h3 className="text-xl font-bold text-slate-900 mb-2">Set Kunci Jawaban & Bobot</h3>
             <p className="text-sm text-slate-500 mb-6">Ujian: <span className="font-semibold text-slate-800">{kunciModalUjian.judul}</span></p>
             
             <div className="flex-1 overflow-y-auto mb-6 pr-2 custom-scrollbar">
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5">
                 {Array.from({ length: Number(kunciModalUjian.jml_soal) || 0 }).map((_, i) => (
-                  <div key={i} className="flex flex-col bg-slate-50 p-3 rounded-xl border border-slate-200 focus-within:border-violet-500 focus-within:ring-2 focus-within:ring-violet-500/20 smooth-transition">
-                    <label className="text-[10px] uppercase font-bold text-slate-500 tracking-wider mb-1">No {i + 1}</label>
-                    <select
-                      className="bg-transparent font-bold text-slate-800 outline-none w-full cursor-pointer"
-                      value={tempKunci[i + 1] || ''}
-                      onChange={(e) => setTempKunci(prev => ({ ...prev, [i + 1]: e.target.value }))}
-                    >
-                      <option value="">-</option>
-                      {(kunciModalUjian.jml_opsi === 4 ? ['A','B','C','D'] : ['A','B','C','D','E']).map(o => (
-                        <option key={o} value={o}>{o}</option>
-                      ))}
-                    </select>
+                  <div key={i} className="flex flex-col bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80 focus-within:border-violet-500 focus-within:ring-2 focus-within:ring-violet-500/10 smooth-transition">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-xs font-bold text-slate-800">No {i + 1}</span>
+                      <span className="text-[10px] text-slate-400 font-medium">Opsional</span>
+                    </div>
+                    <div className="flex gap-2.5">
+                      <div className="flex-1">
+                        <label className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block mb-1">Kunci</label>
+                        <select
+                          className="bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-800 outline-none w-full cursor-pointer focus:border-violet-500 hover:bg-slate-50 transition-colors"
+                          value={tempKunci[i + 1] || ''}
+                          onChange={(e) => setTempKunci(prev => ({ ...prev, [i + 1]: e.target.value }))}
+                        >
+                          <option value="">-</option>
+                          {(kunciModalUjian.jml_opsi === 4 ? ['A','B','C','D'] : ['A','B','C','D','E']).map(o => (
+                            <option key={o} value={o}>{o}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="w-20">
+                        <label className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block mb-1">Bobot</label>
+                        <input
+                          type="number"
+                          placeholder="1"
+                          min="1"
+                          className="bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-slate-800 outline-none w-full focus:border-violet-500"
+                          value={tempBobot[i + 1]?.toString() || ''}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setTempBobot(prev => {
+                              const updated = { ...prev };
+                              if (val === '') {
+                                delete updated[i + 1];
+                              } else {
+                                updated[i + 1] = Number(val);
+                              }
+                              return updated;
+                            });
+                          }}
+                        />
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -901,7 +936,7 @@ export function GenericView({ menu }: { menu: string }) {
                 onClick={handleSaveKunci}
                 className="px-6 py-3 bg-violet-600 text-white font-semibold rounded-full hover:bg-violet-700 btn-touch shadow-[0_4px_15px_rgba(139,92,246,0.3)] flex items-center gap-2"
               >
-                Kunci Tersimpan
+                Kunci & Bobot Tersimpan
               </button>
             </div>
           </div>

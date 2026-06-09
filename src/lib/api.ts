@@ -425,26 +425,48 @@ class FirestoreAPI {
       case 'submit_ujian':
         const ujianDoc = await getDoc(doc(db, 'ujian', payload.id_ujian));
         let kunciJawaban: Record<string, string> = {};
+        let bobotJawaban: Record<string, number> = {};
         let jml_soal_pg = 0;
         
         if (ujianDoc.exists()) {
           kunciJawaban = ujianDoc.data().kunci_jawaban || {};
+          bobotJawaban = ujianDoc.data().bobot_jawaban || {};
           jml_soal_pg = Number(ujianDoc.data().jml_soal) || 0;
         }
         
+        const hasCustomWeights = Object.keys(bobotJawaban).length > 0;
+        let totalWeight = 0;
+        if (hasCustomWeights) {
+          for (let i = 1; i <= jml_soal_pg; i++) {
+            const w = Number(bobotJawaban[i]) || 1;
+            totalWeight += w;
+          }
+        }
+
         let bn = 0;
+        let earnedWeight = 0;
         for (let idS in payload.jawaban) {
           if (!idS.startsWith('essay_')) {
             const noMatch = idS.match(/\d+/);
             if (noMatch) {
               const no = parseInt(noMatch[0], 10);
-              if (kunciJawaban[no] && payload.jawaban[idS] === kunciJawaban[no]) {
+              const isCorrect = kunciJawaban[no] && payload.jawaban[idS] === kunciJawaban[no];
+              if (isCorrect) {
                 bn++;
+                if (hasCustomWeights) {
+                  earnedWeight += Number(bobotJawaban[no]) || 1;
+                }
               }
             }
           }
         }
-        let score = Math.round((jml_soal_pg > 0) ? (bn / jml_soal_pg) * 100 : 0);
+        
+        let score = 0;
+        if (hasCustomWeights) {
+          score = Math.round((totalWeight > 0) ? (earnedWeight / totalWeight) * 100 : 0);
+        } else {
+          score = Math.round((jml_soal_pg > 0) ? (bn / jml_soal_pg) * 100 : 0);
+        }
         
         await setDoc(doc(collection(db, 'nilai')), {
           id_ujian: payload.id_ujian,
