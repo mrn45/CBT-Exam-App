@@ -61,7 +61,7 @@ export function Dashboard() {
     { id: 'input_cp', icon: Target, label: 'Input CP' },
     { id: 'monitor', icon: Radio, label: 'Live Monitor' },
     { id: 'koreksi', icon: PenTool, label: 'Koreksi Essay' },
-    { id: 'katrol_asli', icon: Scale, label: 'Katrol Nilai Asli' },
+    { id: 'katrol_asli', icon: Scale, label: 'Penyesuaian Nilai' },
     { id: 'katrol', icon: Scale, label: 'Nilai Akhir' },
   ];
 
@@ -185,7 +185,7 @@ export function Dashboard() {
               <Menu className="w-5 h-5" />
             </button>
             <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight flex items-center capitalize">
-              {activeMenu.replace('_', ' ')}
+              {activeMenus.find(m => 'id' in m && m.id === activeMenu)?.label || activeMenu.replace('_', ' ')}
             </h2>
           </div>
           

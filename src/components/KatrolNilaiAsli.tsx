@@ -132,9 +132,9 @@ export default function KatrolNilaiAsli() {
         <div>
           <h2 className="text-2xl font-black flex items-center gap-3">
             <Scale className="w-7 h-7" />
-            Katrol Nilai Asli Ujian
+            Penyesuaian Nilai Ujian
           </h2>
-          <p className="text-emerald-100 font-medium text-sm mt-1">Penyesuaian nilai asli ujian siswa secara massal</p>
+          <p className="text-emerald-100 font-medium text-sm mt-1">Penyesuaian nilai asli ujian siswa secara massal atau individu</p>
         </div>
         
         <div className="flex bg-white/10 p-1.5 rounded-xl border border-white/20">

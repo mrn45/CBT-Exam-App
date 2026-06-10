@@ -9,7 +9,7 @@ export function PengawasHome({ onNavigate }: { onNavigate: (path: string) => voi
       { id: 'input_cp', label: 'Input CP', icon: Target, desc: 'Input Capaian Pembelajaran untuk ujian', color: 'text-blue-600', bg: 'bg-blue-50', hover: 'hover:border-blue-300 hover:shadow-blue-200/50' },
     { id: 'monitor', label: 'Live Monitor', icon: Radio, desc: 'Pantau progres ujian siswa secara real-time', color: 'text-rose-600', bg: 'bg-rose-50', hover: 'hover:border-rose-300 hover:shadow-rose-200/50' },
     { id: 'koreksi', label: 'Koreksi Essay', icon: PenTool, desc: 'Periksa dan nilai jawaban essay siswa', color: 'text-amber-600', bg: 'bg-amber-50', hover: 'hover:border-amber-300 hover:shadow-amber-200/50' },
-    { id: 'katrol_asli', label: 'Katrol Nilai Asli', icon: Scale, desc: 'Penyesuaian nilai asli ujian siswa', color: 'text-teal-600', bg: 'bg-teal-50', hover: 'hover:border-teal-300 hover:shadow-teal-200/50' },
+    { id: 'katrol_asli', label: 'Penyesuaian Nilai', icon: Scale, desc: 'Penyesuaian nilai asli ujian siswa', color: 'text-teal-600', bg: 'bg-teal-50', hover: 'hover:border-teal-300 hover:shadow-teal-200/50' },
     { id: 'katrol', label: 'Nilai Akhir', icon: Scale, desc: 'Kelola nilai akhir dan penyesuaian (katrol)', color: 'text-emerald-600', bg: 'bg-emerald-50', hover: 'hover:border-emerald-300 hover:shadow-emerald-200/50' },
   ].filter(s => !(s.id === 'katrol_asli' && settings?.fitur_katrol === false));
 
