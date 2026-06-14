@@ -67,6 +67,23 @@ export function GenericModal({ isOpen, onClose, schema, initialData, colName }: 
     }
   }, [colName, isOpen, user]);
 
+  useEffect(() => {
+    if (isOpen) {
+      setFormData(initialData || {});
+      if (colName === 'guru' && initialData) {
+        if (initialData.mengajar && Array.isArray(initialData.mengajar)) {
+          setMengajarList(JSON.parse(JSON.stringify(initialData.mengajar)));
+        } else if (initialData.id_kelas && initialData.id_mapel) {
+          setMengajarList([{ id_kelas: initialData.id_kelas, id_mapel: initialData.id_mapel }]);
+        } else {
+          setMengajarList([{ id_kelas: '', id_mapel: '' }]);
+        }
+      } else {
+        setMengajarList([{ id_kelas: '', id_mapel: '' }]);
+      }
+    }
+  }, [isOpen, initialData, colName]);
+
   const handleSave = async (e: any) => {
     e.preventDefault();
     setIsSaving(true);
@@ -208,20 +225,64 @@ export function GenericModal({ isOpen, onClose, schema, initialData, colName }: 
                 
                 if (c === 'id_kelas') {
                   return (
-                    <div key={c}>
-                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Kelas</label>
-                      <select 
-                        required
-                        value={formData[c] || ''} 
-                        onChange={e => setFormData({...formData, [c]: e.target.value})} 
-                        className="w-full bg-slate-50 border border-slate-200 p-3.5 rounded-xl text-slate-900 outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-500/10 smooth-transition"
-                      >
-                        <option value="">-- Pilih Kelas --</option>
-                        {colName === 'guru' || colName === 'ujian' ? <option value="ALL">Semua Kelas</option> : null}
-                        {kelasList.map(kls => (
-                          <option key={kls.id} value={kls.id}>{kls.nama || kls.id}</option>
-                        ))}
-                      </select>
+                    <div key={c} className="space-y-4">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Kelas</label>
+                        <select 
+                          required
+                          value={formData[c] || ''} 
+                          onChange={e => {
+                            const val = e.target.value;
+                            const updated = { ...formData, [c]: val };
+                            if (val !== 'ALL') {
+                              delete updated.link_soal_kelas;
+                            }
+                            setFormData(updated);
+                          }} 
+                          className="w-full bg-slate-50 border border-slate-200 p-3.5 rounded-xl text-slate-900 outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-500/10 smooth-transition"
+                        >
+                          <option value="">-- Pilih Kelas --</option>
+                          {colName === 'guru' || colName === 'ujian' ? <option value="ALL">Semua Kelas</option> : null}
+                          {kelasList.map(kls => (
+                            <option key={kls.id} value={kls.id}>{kls.nama || kls.id}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {colName === 'ujian' && formData[c] === 'ALL' && (
+                        <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl space-y-3">
+                          <div className="text-xs font-bold text-violet-600 uppercase tracking-wider">
+                            Link Soal Khusus Per Kelas (Opsional)
+                          </div>
+                          <p className="text-[10px] text-slate-500 leading-normal">
+                            Kosongkan jika ingin menggunakan URL file PDF utama untuk semua kelas. Diisi jika kelas tertentu membutuhkan link naskah yang berbeda.
+                          </p>
+                          <div className="space-y-3 max-h-[200px] overflow-y-auto custom-scrollbar pr-1">
+                            {kelasList.map(kls => (
+                              <div key={kls.id} className="space-y-1">
+                                <label className="block text-[11px] font-semibold text-slate-600">
+                                  Link Soal Kelas {kls.nama || kls.id}
+                                </label>
+                                <input 
+                                  type="text"
+                                  placeholder="https://example.com/soal-kelas.pdf atau ID File (Opsional)"
+                                  value={(formData.link_soal_kelas && formData.link_soal_kelas[kls.id]) || ''}
+                                  onChange={e => {
+                                    const currentLinks = { ...(formData.link_soal_kelas || {}) };
+                                    if (e.target.value.trim() === '') {
+                                      delete currentLinks[kls.id];
+                                    } else {
+                                      currentLinks[kls.id] = e.target.value;
+                                    }
+                                    setFormData({ ...formData, link_soal_kelas: currentLinks });
+                                  }}
+                                  className="w-full bg-white border border-slate-200 p-2.5 rounded-lg text-xs text-slate-800 outline-none focus:border-violet-500 transition-colors"
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   );
                 }

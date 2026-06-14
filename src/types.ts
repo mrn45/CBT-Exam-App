@@ -33,6 +33,7 @@ export interface Ujian {
   nama_mapel?: string;
   status_pengerjaan?: 'Selesai' | 'Mengerjakan' | 'Belum Mulai';
   jawaban_sementara?: Record<string, string>;
+  link_soal_kelas?: Record<string, string>;
 }
 
 export interface Soal {

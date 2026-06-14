@@ -224,11 +224,18 @@ export function ExamRoom({ exam, onComplete }: { exam: Ujian, onComplete: () => 
           </div>
         </div>
         <div className="flex-1 bg-slate-50 flex items-center justify-center p-1.5 sm:p-2 relative overflow-hidden">
-          <iframe 
-            src={getEmbedUrl(exam.file_pdf)} 
-            className="w-full h-full bg-white rounded-xl shadow-inner border-0"
-            title="Naskah Soal"
-          />
+          {(() => {
+            const targetPdf = (exam.link_soal_kelas && user?.id_kelas && exam.link_soal_kelas[user.id_kelas])
+              ? exam.link_soal_kelas[user.id_kelas]
+              : exam.file_pdf;
+            return (
+              <iframe 
+                src={getEmbedUrl(targetPdf)} 
+                className="w-full h-full bg-white rounded-xl shadow-inner border-0"
+                title="Naskah Soal"
+              />
+            );
+          })()}
         </div>
       </div>
 
