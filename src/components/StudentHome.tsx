@@ -35,7 +35,11 @@ export function StudentHome({ onStartExam }: { onStartExam: (exam: Ujian) => voi
     const startRes = await api.call('mulai_ujian', { id_ujian: exam.id, id_siswa: user?.id_siswa });
     
     if (startRes.success) {
-      onStartExam(startRes.data.ujian);
+      const examWithAnswers = {
+        ...startRes.data.ujian,
+        jawaban_sementara: startRes.data.jawaban_sementara
+      };
+      onStartExam(examWithAnswers);
     } else {
       toast(startRes.message || 'Gagal memulai ujian', 'error');
     }

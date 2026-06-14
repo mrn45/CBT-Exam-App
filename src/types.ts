@@ -32,6 +32,7 @@ export interface Ujian {
   nama_kelas?: string;
   nama_mapel?: string;
   status_pengerjaan?: 'Selesai' | 'Mengerjakan' | 'Belum Mulai';
+  jawaban_sementara?: Record<string, string>;
 }
 
 export interface Soal {
@@ -50,6 +51,8 @@ export interface Settings {
   auto_katrol_kkm: boolean;
   logo_instansi: string;
   fitur_katrol?: boolean;
+  tampilkan_jawaban_benar?: boolean;
+  fitur_token?: boolean;
 }
 
 export interface DashboardStats {

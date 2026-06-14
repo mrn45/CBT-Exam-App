@@ -11,7 +11,9 @@ export function SettingsView() {
     adminName: '', 
     namaSekolah: '',
     logo_instansi: '',
-    fitur_katrol: true
+    fitur_katrol: true,
+    tampilkan_jawaban_benar: false,
+    fitur_token: true
   });
   
 
@@ -23,7 +25,9 @@ export function SettingsView() {
         adminName: settings.adminName, 
         namaSekolah: settings.namaSekolah,
         logo_instansi: settings.logo_instansi || '',
-        fitur_katrol: settings.fitur_katrol !== false
+        fitur_katrol: settings.fitur_katrol !== false,
+        tampilkan_jawaban_benar: settings.tampilkan_jawaban_benar === true,
+        fitur_token: settings.fitur_token !== false
       });
     }
   }, [settings]);
@@ -104,6 +108,36 @@ export function SettingsView() {
           >
             <div className={`w-4 h-4 bg-white rounded-full transition-transform ${formData.fitur_katrol ? 'transform translate-x-6' : ''}`} />
           </button>
+        </div>
+
+        <div className="flex flex-col gap-4 border-t border-slate-100 pt-4">
+          <div className="flex items-center justify-between bg-slate-50 p-4 rounded-2xl border border-slate-100">
+            <div className="pr-4">
+              <p className="text-sm font-semibold text-slate-800">Tampilkan Jawaban Benar</p>
+              <p className="text-xs text-slate-500 mt-0.5">Jika aktif, rekap/nilai akhir di Pengawas menampilkan jumlah jawaban benar (bukan nilai asli) dan memunculkan input nilai ujian manual.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setFormData({...formData, tampilkan_jawaban_benar: !formData.tampilkan_jawaban_benar})}
+              className={`w-12 h-6 flex items-center rounded-full p-1 shrink-0 transition-colors ${formData.tampilkan_jawaban_benar ? 'bg-emerald-500' : 'bg-slate-300'}`}
+            >
+              <div className={`w-4 h-4 bg-white rounded-full transition-transform ${formData.tampilkan_jawaban_benar ? 'transform translate-x-6' : ''}`} />
+            </button>
+          </div>
+
+          <div className="flex items-center justify-between bg-slate-50 p-4 rounded-2xl border border-slate-100">
+            <div className="pr-4">
+              <p className="text-sm font-semibold text-slate-800">Fungsi Token Siswa</p>
+              <p className="text-xs text-slate-500 mt-0.5">Jika dinonaktifkan, siswa tidak perlu memasukkan token ujian untuk login ke dalam sistem.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setFormData({...formData, fitur_token: !formData.fitur_token})}
+              className={`w-12 h-6 flex items-center rounded-full p-1 shrink-0 transition-colors ${formData.fitur_token ? 'bg-emerald-500' : 'bg-slate-300'}`}
+            >
+              <div className={`w-4 h-4 bg-white rounded-full transition-transform ${formData.fitur_token ? 'transform translate-x-6' : ''}`} />
+            </button>
+          </div>
         </div>
         <div className="pt-4">
           <button type="submit" className="w-full sm:w-auto bg-violet-600 hover:bg-violet-700 text-white font-medium py-3 px-8 rounded-full flex items-center justify-center gap-2 btn-touch shadow-[0_4px_15px_rgba(139,92,246,0.3)]">

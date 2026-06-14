@@ -4,7 +4,7 @@ import { useApp } from '../lib/context';
 import { api } from '../lib/api';
 import { formatTime } from '../lib/utils';
 import { toast } from './ui/Toast';
-import { FileText, Send, AlertTriangle } from 'lucide-react';
+import { FileText, Send, AlertTriangle, Cloud, RefreshCw } from 'lucide-react';
 import localforage from 'localforage';
 
 const getEmbedUrl = (url: string) => {
@@ -67,27 +67,47 @@ export function ExamRoom({ exam, onComplete }: { exam: Ujian, onComplete: () => 
   const answeredCount = Object.keys(answers).filter(k => answers[k] && answers[k].trim() !== '').length;
   const progressPercent = Math.round((answeredCount / totalQuestions) * 100) || 0;
 
-  // Sync progress to server real-time
+  const [savingState, setSavingState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+
+  // Sync progress and answers auto-save to server real-time with debounce (autosave)
   useEffect(() => {
     if (exam?.id && user?.id_siswa) {
+      setSavingState('saving');
       const handler = setTimeout(() => {
         api.call('sync_progres', {
           id_ujian: exam.id,
           id_siswa: user.id_siswa,
-          terjawab: answeredCount
-        }).catch(err => console.warn("Failed to sync progress:", err));
-      }, 500); // 500ms debounce
+          terjawab: answeredCount,
+          jawaban: answers
+        }).then(res => {
+          if (res && res.success) {
+            setSavingState('saved');
+          } else {
+            setSavingState('error');
+          }
+        }).catch(err => {
+          console.warn("Failed to sync progress and auto-save answers:", err);
+          setSavingState('error');
+        });
+      }, 1000); // 1s debounce to protect Firestore write limits from rapid keystrokes/clicks
       return () => clearTimeout(handler);
     }
-  }, [answeredCount, exam?.id, user?.id_siswa]);
+  }, [answeredCount, answers, exam?.id, user?.id_siswa]);
 
-  // Load cached answers
+  // Load cached answers merged with server ones
   useEffect(() => {
     if (exam?.id && user?.id_siswa) {
       const key = `exam_${exam.id}_${user.id_siswa}`;
-      localforage.getItem<Record<string, string>>(key).then(val => {
-        if (val) setAnswers(val);
-      }).catch(err => console.warn('Failed loading local cache:', err));
+      const serverVal = exam.jawaban_sementara || {};
+      
+      localforage.getItem<Record<string, string>>(key).then(cachedVal => {
+        // Merge so we never lose anything (local storage is fallback if newer (e.g. offline edits))
+        const mergedAnswers = { ...serverVal, ...(cachedVal || {}) };
+        setAnswers(mergedAnswers);
+      }).catch(err => {
+        console.warn('Failed loading local cache, falling back to server:', err);
+        setAnswers(serverVal);
+      });
     }
   }, [exam?.id, user?.id_siswa]);
 
@@ -216,7 +236,36 @@ export function ExamRoom({ exam, onComplete }: { exam: Ujian, onComplete: () => 
       <div className="flex-1 w-full lg:w-[420px] lg:flex-none bg-white rounded-2xl border border-slate-200 shadow-none flex flex-col overflow-hidden relative shrink-0">
         <div className="bg-white border-b border-slate-200 text-slate-900 p-3 sm:p-5 shrink-0 flex flex-col gap-3 sm:gap-4 relative z-10 sticky top-0">
           <div className="flex justify-between items-center">
-            <h4 className="font-semibold text-violet-400 tracking-tight text-base sm:text-lg">LJK DIGITAL</h4>
+            <div>
+              <h4 className="font-semibold text-violet-500 tracking-tight text-base sm:text-lg">LJK DIGITAL</h4>
+              {/* Cloud Auto-save Status Indicator */}
+              <div className="flex items-center gap-1.5 text-[10px] mt-0.5 text-slate-400">
+                {savingState === 'saving' && (
+                  <>
+                    <RefreshCw className="w-3 h-3 text-violet-400 animate-spin" />
+                    <span className="font-medium text-slate-400">Menyimpan...</span>
+                  </>
+                )}
+                {savingState === 'saved' && (
+                  <>
+                    <Cloud className="w-3 h-3 text-emerald-500" />
+                    <span className="font-semibold text-emerald-600">Simpan cloud aktif</span>
+                  </>
+                )}
+                {savingState === 'error' && (
+                  <>
+                    <AlertTriangle className="w-3 h-3 text-red-500 animate-pulse" />
+                    <span className="font-semibold text-red-500 font-mono">Auto-save error</span>
+                  </>
+                )}
+                {savingState === 'idle' && (
+                  <>
+                    <Cloud className="w-3 h-3 text-slate-400" />
+                    <span>Auto-save cloud aktif</span>
+                  </>
+                )}
+              </div>
+            </div>
             <div className={`px-3 sm:px-4 py-1 sm:py-1.5 rounded-xl font-mono text-base sm:text-lg font-bold border ${timeLeft < 300 ? 'bg-red-500/20 text-red-500 border-red-500/50 animate-pulse' : 'bg-slate-100 text-slate-700 border-slate-200'}`}>
               {formatTime(timeLeft)}
             </div>

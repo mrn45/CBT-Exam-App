@@ -225,7 +225,14 @@ class FirestoreAPI {
               const sSnap = await getDocs(query(collection(db, 'siswa'), where('username', 'in', usernamesToTry)));
               if (!sSnap.empty) {
                 const s: any = sSnap.docs[0].data();
-                return { success: true, require_token: true, temp_data: { ...u, id_siswa: sSnap.docs[0].id, id_kelas: s.id_kelas } };
+                const setDocData = await getDoc(doc(db, 'settings', 'global'));
+                const settingsData = setDocData.exists() ? (setDocData.data() as Settings) : null;
+                const isTokenRequired = !settingsData || settingsData.fitur_token !== false;
+                if (isTokenRequired) {
+                  return { success: true, require_token: true, temp_data: { ...u, id_siswa: sSnap.docs[0].id, id_kelas: s.id_kelas } };
+                } else {
+                  return { success: true, data: { ...u, id_siswa: sSnap.docs[0].id, id_kelas: s.id_kelas } };
+                }
               }
             }
             if (u.role === 'Pengawas') {
@@ -255,7 +262,14 @@ class FirestoreAPI {
           const matchedSiswa = sSnap.docs.find(d => String(d.data().password || '').trim() === passwordStr);
           if (matchedSiswa) {
             const s = { id: matchedSiswa.id, ...matchedSiswa.data() } as any;
-            return { success: true, require_token: true, temp_data: { id: s.id, username: s.username, role: 'Siswa', nama: s.nama, id_siswa: s.id, id_kelas: s.id_kelas } };
+            const setDocData = await getDoc(doc(db, 'settings', 'global'));
+            const settingsData = setDocData.exists() ? (setDocData.data() as Settings) : null;
+            const isTokenRequired = !settingsData || settingsData.fitur_token !== false;
+            if (isTokenRequired) {
+              return { success: true, require_token: true, temp_data: { id: s.id, username: s.username, role: 'Siswa', nama: s.nama, id_siswa: s.id, id_kelas: s.id_kelas } };
+            } else {
+              return { success: true, data: { id: s.id, username: s.username, role: 'Siswa', nama: s.nama, id_siswa: s.id, id_kelas: s.id_kelas } };
+            }
           }
         }
 
@@ -374,12 +388,15 @@ class FirestoreAPI {
           jml_opsi: Number(dtUjian.jml_opsi) || 4,
         };
         
+        let existingJawaban = {};
         if (chkProg.empty) {
           const total_soal = mappedUjian.jml_soal + mappedUjian.jml_essay;
-          await setDoc(doc(collection(db, 'progres')), { id_ujian: payload.id_ujian, id_siswa: payload.id_siswa, status: 'Sedang Mengerjakan', terjawab: 0, total_soal });
+          await setDoc(doc(collection(db, 'progres')), { id_ujian: payload.id_ujian, id_siswa: payload.id_siswa, status: 'Sedang Mengerjakan', terjawab: 0, total_soal, jawaban_sementara: {} });
+        } else {
+          existingJawaban = chkProg.docs[0].data().jawaban_sementara || {};
         }
         
-        return { success: true, data: { ujian: {id: targetU2.id, ...mappedUjian}, soal: qData } };
+        return { success: true, data: { ujian: {id: targetU2.id, ...mappedUjian}, soal: qData, jawaban_sementara: existingJawaban } };
 
       case 'update_terjawab':
         const pq = await getDocs(query(collection(db, 'progres'), where('id_ujian', '==', payload.id_ujian), where('id_siswa', '==', payload.id_siswa)));
@@ -415,6 +432,7 @@ class FirestoreAPI {
           }
           const updates: any = {};
           if (payload.terjawab !== undefined) updates.terjawab = payload.terjawab;
+          if (payload.jawaban !== undefined) updates.jawaban_sementara = payload.jawaban;
           
           if (Object.keys(updates).length > 0) {
             await updateDoc(doc(db, 'progres', progDoc.id), updates);
@@ -473,6 +491,7 @@ class FirestoreAPI {
           id_siswa: payload.id_siswa,
           nilai_pg: score,
           nilai_asli: score,
+          benar_pg: bn,
           nilai_katrol: 0,
           status: 'Selesai',
           jawaban_essay: JSON.stringify(payload.jawaban),

@@ -10,7 +10,7 @@ import { deleteDoc, doc, updateDoc, collection, getDocs, query, where, setDoc } 
 import * as XLSX from 'xlsx';
 
 export function GenericView({ menu }: { menu: string }) {
-  const { user } = useApp();
+  const { user, settings } = useApp();
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -163,16 +163,20 @@ export function GenericView({ menu }: { menu: string }) {
     try {
       const harian = parseFloat(inlineValues[row.id]?.nilai_harian ?? row.nilai_harian ?? '0');
       const tugas = parseFloat(inlineValues[row.id]?.nilai_tugas ?? row.nilai_tugas ?? '0');
-      const ujian = parseFloat(row.nilai_asli ?? '0');
+      const isCustomJawabanBenar = settings?.tampilkan_jawaban_benar === true;
+      const ujian = parseFloat(isCustomJawabanBenar ? (inlineValues[row.id]?.nilai_asli ?? row.nilai_asli ?? '0') : (row.nilai_asli ?? '0'));
       
       const akhir = (harian * 0.4) + (tugas * 0.2) + (ujian * 0.4);
       const nilai_katrol = Math.round(akhir);
       
-      const updateData = {
+      const updateData: any = {
         nilai_harian: harian,
         nilai_tugas: tugas,
         nilai_katrol
       };
+      if (isCustomJawabanBenar) {
+        updateData.nilai_asli = ujian;
+      }
       
       await updateDoc(doc(db, 'nilai', row.id), updateData);
       if (user?.role === 'Guru' || user?.role === 'Pengawas') {
@@ -197,16 +201,20 @@ export function GenericView({ menu }: { menu: string }) {
       const promises = filteredData.map(row => {
         const harian = parseFloat(inlineValues[row.id]?.nilai_harian ?? row.nilai_harian ?? '0');
         const tugas = parseFloat(inlineValues[row.id]?.nilai_tugas ?? row.nilai_tugas ?? '0');
-        const ujian = parseFloat(row.nilai_asli ?? '0');
+        const isCustomJawabanBenar = settings?.tampilkan_jawaban_benar === true;
+        const ujian = parseFloat(isCustomJawabanBenar ? (inlineValues[row.id]?.nilai_asli ?? row.nilai_asli ?? '0') : (row.nilai_asli ?? '0'));
         
         const akhir = (harian * 0.4) + (tugas * 0.2) + (ujian * 0.4);
         const nilai_katrol = Math.round(akhir);
         
-        const updateData = {
+        const updateData: any = {
           nilai_harian: harian,
           nilai_tugas: tugas,
           nilai_katrol
         };
+        if (isCustomJawabanBenar) {
+          updateData.nilai_asli = ujian;
+        }
         
         return updateDoc(doc(db, 'nilai', row.id), updateData);
       });
@@ -766,7 +774,69 @@ export function GenericView({ menu }: { menu: string }) {
                           <span className="truncate max-w-[200px] inline-block align-bottom font-medium text-slate-700">
                              {ujianList.find(u => u.id === row[c])?.judul || row[c]}
                           </span>
-                        ) : c === 'nilai_asli' || c === 'nilai_katrol' ? (
+                        ) : c === 'nilai_asli' ? (
+                          settings?.tampilkan_jawaban_benar === true && (user?.role === 'Guru' || user?.role === 'Pengawas' || user?.role === 'Admin') ? (
+                            (() => {
+                              const ujk = ujianList.find(u => u.id === row.id_ujian);
+                              const totalPG = ujk ? Number(ujk.jml_soal) || 0 : 0;
+                              let displayBenar = row.benar_pg;
+                              if (displayBenar === undefined || displayBenar === null) {
+                                if (row.nilai_pg !== undefined && totalPG > 0) {
+                                  displayBenar = Math.round((Number(row.nilai_pg) / 100) * totalPG);
+                                } else {
+                                  displayBenar = 0;
+                                }
+                              }
+                              return (
+                                <div className="flex flex-col gap-1.5 items-start">
+                                  <span className="text-xs font-bold px-2 py-1 bg-emerald-50 text-emerald-700 rounded border border-emerald-100 flex items-center gap-1 font-mono">
+                                    {displayBenar} / {totalPG || '—'} BENAR
+                                  </span>
+                                  <div className="flex items-center gap-1.5 mt-1">
+                                    <span className="text-[10px] text-slate-400 font-bold uppercase">Nilai:</span>
+                                    <input 
+                                      type="number"
+                                      min="0"
+                                      max="100"
+                                      className="bg-white border border-slate-200 text-slate-700 w-16 px-2 py-1 rounded-lg text-xs outline-none focus:border-violet-500 transition-colors font-bold font-mono"
+                                      placeholder="0"
+                                      value={inlineValues[row.id]?.nilai_asli ?? row.nilai_asli ?? ''}
+                                      onChange={(e) => {
+                                        setInlineValues(prev => ({
+                                          ...prev,
+                                          [row.id]: {
+                                            ...(prev[row.id] || {}),
+                                            nilai_asli: e.target.value
+                                          }
+                                        }))
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+                              );
+                            })()
+                          ) : (
+                            <div className="flex flex-col gap-1 items-start">
+                               <span className={`font-bold ${row[c] !== undefined && row[c] !== null && row[c] !== '' ? 'px-2 py-1 bg-slate-100 rounded text-slate-800' : 'text-slate-400 italic'}`}>
+                                 {row[c] !== undefined && row[c] !== null && row[c] !== '' ? row[c] : 'Belum Ada'}
+                               </span>
+                               {(() => {
+                                 const ujk = ujianList.find(u => u.id === row.id_ujian);
+                                 if (ujk && (ujk.nilai_kkm !== undefined && ujk.nilai_kkm !== null && ujk.nilai_kkm !== '')) {
+                                    const cVal = Number(row[c]);
+                                    const isPass = cVal >= Number(ujk.nilai_kkm);
+                                    const hasScore = row[c] !== undefined && row[c] !== null && row[c] !== '';
+                                    return (
+                                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${!hasScore ? 'bg-slate-100 text-slate-500' : isPass ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                                        KKTP: {ujk.nilai_kkm} {hasScore ? (isPass ? '(Lulus)' : '(Remedial)') : ''}
+                                      </span>
+                                    );
+                                 }
+                                 return null;
+                               })()}
+                            </div>
+                          )
+                        ) : c === 'nilai_katrol' ? (
                           <div className="flex flex-col gap-1 items-start">
                              <span className={`font-bold ${row[c] !== undefined && row[c] !== null && row[c] !== '' ? 'px-2 py-1 bg-slate-100 rounded text-slate-800' : 'text-slate-400 italic'}`}>
                                {row[c] !== undefined && row[c] !== null && row[c] !== '' ? row[c] : 'Belum Ada'}
