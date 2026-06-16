@@ -561,9 +561,37 @@ export function GenericView({ menu }: { menu: string }) {
   });
 
   const handleExportData = () => {
-    let csvContent = schema.join(',') + '\n';
+    let headers = [...schema];
+    if (menu === 'rekap' || menu === 'katrol') {
+      headers = ['id_siswa', 'nama_siswa', 'id_ujian', 'judul_ujian', 'nama_mapel', 'nilai_asli', 'nilai_harian', 'nilai_tugas', 'nilai_katrol', 'status', 'status_koreksi'];
+    }
+
+    let csvContent = headers.join(',') + '\n';
     filteredData.forEach(row => {
-      csvContent += schema.map(c => `"${String(row[c] || '').replace(/"/g, '""')}"`).join(',') + '\n';
+      if (menu === 'rekap' || menu === 'katrol') {
+        const studentName = siswaList.find(s => s.id === row.id_siswa)?.nama || row.id_siswa || '';
+        const exam = ujianList.find(u => u.id === row.id_ujian);
+        const examTitle = exam?.judul || row.id_ujian || '';
+        const mapel = exam ? mapelList.find(m => m.id === exam.id_mapel) : null;
+        const mapelName = mapel?.nama || exam?.id_mapel || '';
+
+        const rowValues = [
+          row.id_siswa || '',
+          studentName,
+          row.id_ujian || '',
+          examTitle,
+          mapelName,
+          row.nilai_asli !== undefined ? row.nilai_asli : '',
+          row.nilai_harian !== undefined ? row.nilai_harian : '',
+          row.nilai_tugas !== undefined ? row.nilai_tugas : '',
+          row.nilai_katrol !== undefined ? row.nilai_katrol : '',
+          row.status || '',
+          row.status_koreksi || ''
+        ];
+        csvContent += rowValues.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',') + '\n';
+      } else {
+        csvContent += schema.map(c => `"${String(row[c] || '').replace(/"/g, '""')}"`).join(',') + '\n';
+      }
     });
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
