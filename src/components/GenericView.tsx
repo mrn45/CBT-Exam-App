@@ -34,7 +34,10 @@ export function GenericView({ menu }: { menu: string }) {
   const [logNamaFilter, setLogNamaFilter] = useState<string>('');
 
   useEffect(() => {
-    if (menu === 'data_cp' || menu === 'input_cp' || menu === 'rekap' || menu === 'katrol' || menu === 'monitor' || menu === 'data_guru' || menu === 'data_siswa' || menu === 'ujian') {
+    setFilterMapel('');
+    setFilterKelas('');
+    setSearchQuery('');
+    if (['data_cp', 'input_cp', 'rekap', 'katrol', 'monitor', 'data_guru', 'data_siswa', 'ujian', 'koreksi'].includes(menu)) {
       const fetchFilters = async () => {
         try {
           const mapelSnap = await getDocs(collection(db, 'mapel'));
@@ -487,7 +490,7 @@ export function GenericView({ menu }: { menu: string }) {
       const isAllMapel = allowedMapel.includes('ALL');
 
       if (!isAllKelas) {
-        if (['rekap', 'katrol', 'monitor'].includes(menu)) {
+        if (['rekap', 'katrol', 'monitor', 'koreksi'].includes(menu)) {
            const siswa = siswaList.find(s => s.id === row.id_siswa);
            if (!siswa || !allowedKelas.includes(siswa.id_kelas)) return false;
         } else if (row.id_kelas && !allowedKelas.includes(row.id_kelas)) {
@@ -496,7 +499,7 @@ export function GenericView({ menu }: { menu: string }) {
       }
       
       if (!isAllMapel) {
-         if (['rekap', 'katrol', 'monitor'].includes(menu)) {
+         if (['rekap', 'katrol', 'monitor', 'koreksi'].includes(menu)) {
             const ujian = ujianList.find(u => u.id === row.id_ujian);
             if (!ujian || !allowedMapel.includes(ujian.id_mapel)) return false;
          } else if (row.id_mapel && !allowedMapel.includes(row.id_mapel)) {
@@ -508,7 +511,7 @@ export function GenericView({ menu }: { menu: string }) {
     if ((menu === 'data_cp' || menu === 'input_cp') && filterMapel && row.id_mapel !== filterMapel) return false;
     if ((menu === 'data_cp' || menu === 'input_cp') && filterKelas && row.id_kelas !== filterKelas) return false;
     
-    if (['rekap', 'katrol', 'monitor'].includes(menu)) {
+    if (['rekap', 'katrol', 'monitor', 'koreksi'].includes(menu)) {
       if (filterKelas) {
         const siswa = siswaList.find(s => s.id === row.id_siswa);
         if (siswa && siswa.id_kelas !== filterKelas) return false;
@@ -517,6 +520,15 @@ export function GenericView({ menu }: { menu: string }) {
         const ujian = ujianList.find(u => u.id === row.id_ujian);
         if (ujian && ujian.id_mapel !== filterMapel) return false;
       }
+    }
+
+    if (menu === 'ujian') {
+      if (filterMapel && row.id_mapel !== filterMapel && row.id_mapel !== 'ALL') return false;
+      if (filterKelas && row.id_kelas !== filterKelas && row.id_kelas !== 'ALL') return false;
+    }
+
+    if (menu === 'data_siswa') {
+      if (filterKelas && row.id_kelas !== filterKelas) return false;
     }
 
     if (menu === 'log_aktivitas') {
@@ -614,7 +626,7 @@ export function GenericView({ menu }: { menu: string }) {
               </button>
             </div>
           )}
-          {['data_cp', 'input_cp', 'rekap', 'katrol', 'monitor'].includes(menu) && (
+          {['data_cp', 'input_cp', 'rekap', 'katrol', 'monitor', 'ujian', 'data_siswa', 'koreksi'].includes(menu) && (
             <div className="hidden sm:flex items-center gap-2 mr-2">
               {menu === 'monitor' && user?.role === 'Admin' && (
                 <div className="flex items-center gap-2 border border-slate-200 rounded-full px-3 py-1 bg-slate-50 h-10">
@@ -655,7 +667,7 @@ export function GenericView({ menu }: { menu: string }) {
                   Refresh
                 </button>
               )}
-              {(menu === 'data_cp' || (menu === 'input_cp' && user?.role !== 'Pengawas') || menu === 'rekap' || menu === 'katrol' || menu === 'monitor') && (
+              {(menu === 'data_cp' || (menu === 'input_cp' && user?.role !== 'Pengawas') || ['rekap', 'katrol', 'monitor', 'ujian', 'koreksi'].includes(menu)) && (
                 <select
                   value={filterMapel}
                   onChange={(e) => setFilterMapel(e.target.value)}
